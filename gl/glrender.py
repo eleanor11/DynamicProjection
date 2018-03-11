@@ -32,6 +32,29 @@ def LoadProgram(shaderPathList):
 		glDeleteShader(shader)
 	return program
 
+# def LoadBMP(fileName):
+
+# 	with open(fileName, 'r') as file:
+# 		close(fileName)
+# 		return auxDIBImageLoad(fileName)
+
+# 	return None
+
+# def LoadTexture(fileName):
+
+# 	with LoadBMP(fileName) as bmp:
+
+# 		glActivate(GL_TEXTURE1)
+
+# 		texture = glGenTextures(1)
+# 		glBindTexture(GL_TEXTURE_2D)
+# 		glTexImage2D(GL_TEXTURE_2D, 0, 3, bmp.shape[0], bmp.shape[1], 0, GL_RGB, GL_UNSIGNED_BYTE, bmp.data)
+
+# 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+# 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+# 	return texture
+
 class GLRenderer(object):
 	def __init__(self, name, size, toTexture = False):
 		self.width, self.height = size
@@ -84,6 +107,9 @@ class GLRenderer(object):
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
 
+		# self.texture = LoadTexture("data/image.bmp")
+
+
 
 	def draw(self, vertices, colors, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -122,6 +148,7 @@ class GLRenderer(object):
 		glDisableVertexAttribArray(1)
 		glUseProgram(0)
 		glutSwapBuffers()
+
 
 		rgb = glReadPixels(0, 0, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE, outputType = None)
 		z = glReadPixels(0, 0, self.width, self.height, GL_DEPTH_COMPONENT, GL_FLOAT, outputType = None)

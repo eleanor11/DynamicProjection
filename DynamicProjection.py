@@ -53,6 +53,8 @@ class DynamicProjection(object):
 		self.depthback = np.zeros([424, 512, 1], np.uint8)
 		self.colorback = np.zeros([424, 512, 4], np.uint8)
 
+
+
 	def c2d(self, rawdepth, rawcolor):
 		# map color frame to depth space
 
@@ -240,6 +242,7 @@ class DynamicProjection(object):
 		self.render.draw(vertices, colors, self.mvp.T)
 
 
+
 	def run(self):
 		while 1:
 			ch = cv.waitKey(1)
@@ -264,6 +267,7 @@ class DynamicProjection(object):
 				mask = depth_part >  0
 
 				cv.imshow('depth', depth)
+				cv.imshow('depth_part', depth_part)
 				cv.imshow('color', color)
 
 				# cv.imwrite('data/depth.png', depth)
@@ -271,6 +275,23 @@ class DynamicProjection(object):
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
+
+
+				# # test color projection
+				# corres = np.array([[[(i + j + k * 80) % 256 for k in range(3)] for j in range(512)] for i in range(424)])
+				# corres[np.logical_not(mask)] = np.array([0, 0, 0])
+
+
+
+				# test image projection
+				image = cv.imread('data/image.bmp')
+				image = image[..., ::-1]
+
+				x0, y0, x1, y1 = 60, 220, 270, 370
+				w, h = image.shape[0], image.shape[1]
+				corres[x0: x1, y0: y1] = np.array([[image[int((i - 60) / 210 * h), int((369 - j) / 150 * w)] for j in range(y0, y1)] for i in range(x0, x1)])
+
+
 
 
 				self.project(rawdepth, corres, mask)
