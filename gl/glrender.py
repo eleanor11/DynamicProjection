@@ -62,8 +62,8 @@ class GLRenderer(object):
 		glutInit()
 		displayMode = GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH | GLUT_STENCIL
 		glutInitDisplayMode(displayMode)
-		# glutInitWindowPosition(1920, 0)
-		glutInitWindowPosition(0, 0)
+		glutInitWindowPosition(1920, 0)
+		# glutInitWindowPosition(0, 0)
 		glutInitWindowSize(self.width, self.height)
 		self.window = glutCreateWindow(name)
 		glEnable(GL_CULL_FACE)
