@@ -127,16 +127,16 @@ class DynamicProjection(object):
 		if d2c:
 
 			# map depth frame to color space
-			rgbd = self.d2c(rawdepth, rawcolor)
-			np.save("rgbd.npy", rgbd)
-			# rgbd = np.load("rgbd.npy")
+			# rgbd = self.d2c(rawdepth, rawcolor)
+			# np.save("data/rgbd.npy", rgbd)
+			rgbd = np.load("data/rgbd.npy")
 
 		else:
 
 			# map color frame to depth sapce
 			rgbd = self.c2d(rawdepth, rawcolor)
-			# np.save("rgbd.npy", rgbd)
-			# rgbd = np.load("rgbd.npy")
+			# np.save("data/rgbd.npy", rgbd)
+			# rgbd = np.load("data/rgbd.npy")
 
 
 		# trun raw depth into gray image
@@ -253,29 +253,33 @@ class DynamicProjection(object):
 			if ch == 27:
 				break
 
-			# if True:
-			if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
+			if True:
+			# if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 			
-				rawdepth = self.kinect.get_last_depth_frame()
-				rawcolor = self.kinect.get_last_color_frame()
+			# 	rawdepth = self.kinect.get_last_depth_frame()
+			# 	rawcolor = self.kinect.get_last_color_frame()
 
-				np.save('data/rawdepth.npy', rawdepth)
-				np.save('data/rawcolor.npy', rawcolor)
+			# 	np.save('data/rawdepth.npy', rawdepth)
+			# 	np.save('data/rawcolor.npy', rawcolor)
 
-				# rawdepth = np.load('data/rawdepth.npy')
-				# rawcolor = np.load('data/rawcolor.npy')
+				rawdepth = np.load('data/rawdepth.npy')
+				rawcolor = np.load('data/rawcolor.npy')
 
 				rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
 				depth = rgbd[:, :, 3]
 				color = rgbd[:, :, 0: 3]
 				mask = depth_part >  0
 
+				# test position projection
+				# color[200: 210, 250: 260] = np.array([255, 0, 0])
+				color[100: 110, 230: 240] = np.array([255, 0, 0])
+
 				cv.imshow('depth', depth)
-				cv.imshow('depth_part', depth_part)
+				# cv.imshow('depth_part', depth_part)
 				cv.imshow('color', color)
 
-				cv.imwrite('data/depth.png', depth)
-				cv.imwrite('data/color.png', color)
+				# cv.imwrite('data/depth.png', depth)
+				# cv.imwrite('data/color.png', color)
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
@@ -294,6 +298,9 @@ class DynamicProjection(object):
 				x0, y0, x1, y1 = 60, 220, 270, 370
 				w, h = image.shape[0], image.shape[1]
 				corres[x0: x1, y0: y1] = np.array([[image[int((i - 60) / 210 * h), int((369 - j) / 150 * w)] for j in range(y0, y1)] for i in range(x0, x1)])
+
+				# corres[200:210, 250:260] = np.array([255, 0, 0])
+				corres[100: 110, 230: 240] = np.array([255, 0, 0])
 
 
 

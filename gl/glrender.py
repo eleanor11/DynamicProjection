@@ -2,6 +2,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 import numpy as np
+import PIL.Image as im
 
 def LoadProgram(shaderPathList):
 	shaderTypeMapping = {
@@ -32,28 +33,22 @@ def LoadProgram(shaderPathList):
 		glDeleteShader(shader)
 	return program
 
-# def LoadBMP(fileName):
 
-# 	with open(fileName, 'r') as file:
-# 		close(fileName)
-# 		return auxDIBImageLoad(fileName)
 
-# 	return None
+def LoadTexture(fileName):
 
-# def LoadTexture(fileName):
+	image = im.open(fileName)
 
-# 	with LoadBMP(fileName) as bmp:
+	w, h = image.size[0], image.size[1]
+	data = image.tobytes("raw", "RGBX", 0, -1)
 
-# 		glActivate(GL_TEXTURE1)
+	texture = glGenTextures(1)
+	glBindTexture(GL_TEXTURE_2D, texture)
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 
-# 		texture = glGenTextures(1)
-# 		glBindTexture(GL_TEXTURE_2D)
-# 		glTexImage2D(GL_TEXTURE_2D, 0, 3, bmp.shape[0], bmp.shape[1], 0, GL_RGB, GL_UNSIGNED_BYTE, bmp.data)
-
-# 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-# 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-
-# 	return texture
+	return texture
 
 class GLRenderer(object):
 	def __init__(self, name, size, toTexture = False):
@@ -62,10 +57,11 @@ class GLRenderer(object):
 		glutInit()
 		displayMode = GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH | GLUT_STENCIL
 		glutInitDisplayMode(displayMode)
-		glutInitWindowPosition(1920, 0)
-		# glutInitWindowPosition(0, 0)
+		# glutInitWindowPosition(1920, 0)
+		glutInitWindowPosition(0, 0)
 		glutInitWindowSize(self.width, self.height)
 		self.window = glutCreateWindow(name)
+		glutFullScreen()
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_DEPTH_TEST)
 		glDepthFunc(GL_LESS)
@@ -107,7 +103,13 @@ class GLRenderer(object):
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
 
+		# glEnableVertexAttribArray(2)
 		# self.texture = LoadTexture("data/image.bmp")
+		# glUniform1i(glGetUniformLocation(self.program, 'Texture'), self.texture)
+		# glActiveTexture(GL_TEXTURE1)
+		# glEnable(GL_TEXTURE_2D)
+
+
 
 
 
