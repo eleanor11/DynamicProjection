@@ -128,11 +128,15 @@ class DynamicProjection(object):
 
 			# map depth frame to color space
 			rgbd = self.d2c(rawdepth, rawcolor)
+			np.save("rgbd.npy", rgbd)
+			# rgbd = np.load("rgbd.npy")
 
 		else:
 
 			# map color frame to depth sapce
 			rgbd = self.c2d(rawdepth, rawcolor)
+			# np.save("rgbd.npy", rgbd)
+			# rgbd = np.load("rgbd.npy")
 
 
 		# trun raw depth into gray image
@@ -153,37 +157,37 @@ class DynamicProjection(object):
 	def record_background(self, num_frame):
 		print("Record {} frames as background...".format(num_frame))
 
-		depth_cnt = np.zeros([424 * 512], np.uint8)
-		color_cnt = np.zeros([1080 * 1920 * 4], np.uint8)
+		# depth_cnt = np.zeros([424 * 512], np.uint8)
+		# color_cnt = np.zeros([1080 * 1920 * 4], np.uint8)
 
-		for i in range(num_frame):
-			while 1:
-				if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
-					depth_frame = self.kinect.get_last_depth_frame()
-					color_frame = self.kinect.get_last_color_frame()
-					depth_cnt[depth_frame > 0] += 1
-					color_cnt[color_frame > 0] += 1
-					self.depthback_origin += depth_frame
-					self.colorback_origin += color_frame
-					break
+		# for i in range(num_frame):
+		# 	while 1:
+		# 		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
+		# 			depth_frame = self.kinect.get_last_depth_frame()
+		# 			color_frame = self.kinect.get_last_color_frame()
+		# 			depth_cnt[depth_frame > 0] += 1
+		# 			color_cnt[color_frame > 0] += 1
+		# 			self.depthback_origin += depth_frame
+		# 			self.colorback_origin += color_frame
+		# 			break
 
-		depth_mask = depth_cnt > 0
-		self.depthback_origin[depth_mask] /= depth_cnt[depth_mask]
-		color_mask = color_cnt > 0
-		self.colorback_origin[color_mask] /= color_cnt[color_mask]
+		# depth_mask = depth_cnt > 0
+		# self.depthback_origin[depth_mask] /= depth_cnt[depth_mask]
+		# color_mask = color_cnt > 0
+		# self.colorback_origin[color_mask] /= color_cnt[color_mask]
 
-		rgbd = self.d2c(self.depthback_origin, self.colorback_origin)
-		rgbd[:, 3] = self.depth2gray(self.depthback_origin)
+		# rgbd = self.d2c(self.depthback_origin, self.colorback_origin)
+		# rgbd[:, 3] = self.depth2gray(self.depthback_origin)
 
-		back = rgbd.reshape([424, 512, 4])
-		self.depthback = back[:, :, 3]
-		self.colorback = back[:, :, 0: 3]
+		# back = rgbd.reshape([424, 512, 4])
+		# self.depthback = back[:, :, 3]
+		# self.colorback = back[:, :, 0: 3]
 
-		np.save('data/depthback_origin.npy', self.depthback_origin)
-		np.save('data/colorback_origin.npy', self.colorback_origin)
+		# np.save('data/depthback_origin.npy', self.depthback_origin)
+		# np.save('data/colorback_origin.npy', self.colorback_origin)
 
-		# self.depthback_origin = np.load('data/depthback_origin.npy')
-		# self.colorback_origin = np.load('data/colorback_origin.npy')
+		self.depthback_origin = np.load('data/depthback_origin.npy')
+		self.colorback_origin = np.load('data/colorback_origin.npy')
 
 
 	def project(self, rawdepth, corres, mask):
@@ -270,8 +274,8 @@ class DynamicProjection(object):
 				cv.imshow('depth_part', depth_part)
 				cv.imshow('color', color)
 
-				# cv.imwrite('data/depth.png', depth)
-				# cv.imwrite('data/color.png', color)
+				cv.imwrite('data/depth.png', depth)
+				cv.imwrite('data/color.png', color)
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
