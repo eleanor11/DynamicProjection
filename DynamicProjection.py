@@ -7,6 +7,7 @@ from gl.glrender import GLRenderer
 import gl.glm as glm
 import ctypes
 import copy
+import time
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -248,64 +249,111 @@ class DynamicProjection(object):
 
 
 	def run(self):
+
+		t0 = time.time()
+		idx = 0
+
 		while 1:
 			ch = cv.waitKey(1)
 			if ch == 27:
 				break
 
-			if True:
-			# if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
+			# if True:
+			# # if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 			
-			# 	rawdepth = self.kinect.get_last_depth_frame()
-			# 	rawcolor = self.kinect.get_last_color_frame()
+			# # 	rawdepth = self.kinect.get_last_depth_frame()
+			# # 	rawcolor = self.kinect.get_last_color_frame()
 
-			# 	np.save('data/rawdepth.npy', rawdepth)
-			# 	np.save('data/rawcolor.npy', rawcolor)
+			# # 	np.save('data/rawdepth.npy', rawdepth)
+			# # 	np.save('data/rawcolor.npy', rawcolor)
 
-				rawdepth = np.load('data/rawdepth.npy')
-				rawcolor = np.load('data/rawcolor.npy')
+			# 	rawdepth = np.load('data/rawdepth.npy')
+			# 	rawcolor = np.load('data/rawcolor.npy')
 
-				rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
-				depth = rgbd[:, :, 3]
-				color = rgbd[:, :, 0: 3]
-				mask = depth_part >  0
+			# 	rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
+			# 	depth = rgbd[:, :, 3]
+			# 	color = rgbd[:, :, 0: 3]
+			# 	mask = depth_part >  0
 
-				# test position projection
-				# color[200: 210, 250: 260] = np.array([255, 0, 0])
-				color[100: 110, 230: 240] = np.array([255, 0, 0])
+			# 	# test position projection
+			# 	# color[200: 210, 250: 260] = np.array([255, 0, 0])
+			# 	color[100: 110, 230: 240] = np.array([255, 0, 0])
 
-				cv.imshow('depth', depth)
-				# cv.imshow('depth_part', depth_part)
-				cv.imshow('color', color)
+			# 	cv.imshow('depth', depth)
+			# 	# cv.imshow('depth_part', depth_part)
+			# 	cv.imshow('color', color)
 
-				# cv.imwrite('data/depth.png', depth)
-				# cv.imwrite('data/color.png', color)
+			# 	# cv.imwrite('data/depth.png', depth)
+			# 	# cv.imwrite('data/color.png', color)
 
-				corres = np.zeros([424, 512, 3], np.uint8)
-				corres[mask] = np.array([255, 255, 255])
-
-
-				# # test color projection
-				# corres = np.array([[[(i + j + k * 80) % 256 for k in range(3)] for j in range(512)] for i in range(424)])
-				# corres[np.logical_not(mask)] = np.array([0, 0, 0])
+			# 	corres = np.zeros([424, 512, 3], np.uint8)
+			# 	corres[mask] = np.array([255, 255, 255])
 
 
-
-				# test image projection
-				image = cv.imread('data/image.bmp')
-				image = image[..., ::-1]
-
-				x0, y0, x1, y1 = 60, 220, 270, 370
-				w, h = image.shape[0], image.shape[1]
-				corres[x0: x1, y0: y1] = np.array([[image[int((i - 60) / 210 * h), int((369 - j) / 150 * w)] for j in range(y0, y1)] for i in range(x0, x1)])
-
-				# corres[200:210, 250:260] = np.array([255, 0, 0])
-				corres[100: 110, 230: 240] = np.array([255, 0, 0])
+			# 	# # test color projection
+			# 	# corres = np.array([[[(i + j + k * 80) % 256 for k in range(3)] for j in range(512)] for i in range(424)])
+			# 	# corres[np.logical_not(mask)] = np.array([0, 0, 0])
 
 
 
+			# 	# test image projection
+			# 	image = cv.imread('data/image.bmp')
+			# 	image = image[..., ::-1]
 
-				self.project(rawdepth, corres, mask)
+			# 	x0, y0, x1, y1 = 60, 220, 270, 370
+			# 	w, h = image.shape[0], image.shape[1]
+			# 	corres[x0: x1, y0: y1] = np.array([[image[int((i - 60) / 210 * h), int((369 - j) / 150 * w)] for j in range(y0, y1)] for i in range(x0, x1)])
+
+			# 	# corres[200:210, 250:260] = np.array([255, 0, 0])
+			# 	corres[100: 110, 230: 240] = np.array([255, 0, 0])
+
+
+
+			# for calibration
+			t1 = time.time()
+			if t1 - t0 >= 1 and idx < 256 * 3: 
+				if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
+				# if True:
+					print(idx)
+
+					c = 'b'
+					if idx >= 256:
+						c = 'g'
+					if idx >= 512:
+						c = 'r'
+
+					rawdepth = self.kinect.get_last_depth_frame()
+					rawcolor = self.kinect.get_last_color_frame()
+
+
+					rawdepth = np.load('data/rawdepth.npy')
+					rawcolor = np.load('data/rawcolor.npy')
+
+
+					rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
+					depth = rgbd[:, :, 3]
+					color = rgbd[:, :, 0: 3]
+					mask = depth_part >  0
+
+					cv.imwrite('data/capture/capture_' + c + '_'+ str(idx) + '.bmp', color)
+
+					corres = np.zeros([424, 512, 3], np.uint8)
+					corres[mask] = np.array([255, 255, 255])
+
+
+					# test image projection
+					image = cv.imread('data/calibration_color/im_' + c + '_' + str(idx) + '.bmp')
+					cv.imshow('image', image)
+					image = image[..., ::-1]
+
+					x0, y0, x1, y1 = 60, 220, 270, 370
+					w, h = image.shape[0], image.shape[1]
+					corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
+
+					self.project(rawdepth, corres, mask)
+
+					t0 = t1
+					idx = idx + 1
 
 
 if __name__ == '__main__':
