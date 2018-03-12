@@ -128,9 +128,9 @@ class DynamicProjection(object):
 		if d2c:
 
 			# map depth frame to color space
-			# rgbd = self.d2c(rawdepth, rawcolor)
-			# np.save("data/rgbd.npy", rgbd)
-			rgbd = np.load("data/rgbd.npy")
+			rgbd = self.d2c(rawdepth, rawcolor)
+			np.save("data/rgbd.npy", rgbd)
+			# rgbd = np.load("data/rgbd.npy")
 
 		else:
 
@@ -258,14 +258,14 @@ class DynamicProjection(object):
 			if ch == 27:
 				break
 
-			# if True:
-			# # if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
+			# # if True:
+			# if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 			
-			# # 	rawdepth = self.kinect.get_last_depth_frame()
-			# # 	rawcolor = self.kinect.get_last_color_frame()
+			# 	# rawdepth = self.kinect.get_last_depth_frame()
+			# 	# rawcolor = self.kinect.get_last_color_frame()
 
-			# # 	np.save('data/rawdepth.npy', rawdepth)
-			# # 	np.save('data/rawcolor.npy', rawcolor)
+			# 	# np.save('data/rawdepth.npy', rawdepth)
+			# 	# np.save('data/rawcolor.npy', rawcolor)
 
 			# 	rawdepth = np.load('data/rawdepth.npy')
 			# 	rawcolor = np.load('data/rawcolor.npy')
@@ -277,14 +277,14 @@ class DynamicProjection(object):
 
 			# 	# test position projection
 			# 	# color[200: 210, 250: 260] = np.array([255, 0, 0])
-			# 	color[100: 110, 230: 240] = np.array([255, 0, 0])
+			# 	# color[100: 110, 230: 240] = np.array([255, 0, 0])
 
 			# 	cv.imshow('depth', depth)
 			# 	# cv.imshow('depth_part', depth_part)
 			# 	cv.imshow('color', color)
 
-			# 	# cv.imwrite('data/depth.png', depth)
-			# 	# cv.imwrite('data/color.png', color)
+			# 	cv.imwrite('data/depth.png', depth)
+			# 	cv.imwrite('data/color.png', color)
 
 			# 	corres = np.zeros([424, 512, 3], np.uint8)
 			# 	corres[mask] = np.array([255, 255, 255])
@@ -305,29 +305,27 @@ class DynamicProjection(object):
 			# 	corres[x0: x1, y0: y1] = np.array([[image[int((i - 60) / 210 * h), int((369 - j) / 150 * w)] for j in range(y0, y1)] for i in range(x0, x1)])
 
 			# 	# corres[200:210, 250:260] = np.array([255, 0, 0])
-			# 	corres[100: 110, 230: 240] = np.array([255, 0, 0])
+			# 	# corres[100: 110, 230: 240] = np.array([255, 0, 0])
+
+			# 	self.project(rawdepth, corres, mask)
 
 
 
 			# for calibration
 			t1 = time.time()
-			if t1 - t0 >= 1 and idx < 256 * 3: 
+			if t1 - t0 >= 1 and idx < 256: 
 				if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 				# if True:
 					print(idx)
 
-					c = 'b'
-					if idx >= 256:
-						c = 'g'
-					if idx >= 512:
-						c = 'r'
+					c = 'r'
 
 					rawdepth = self.kinect.get_last_depth_frame()
 					rawcolor = self.kinect.get_last_color_frame()
 
 
-					rawdepth = np.load('data/rawdepth.npy')
-					rawcolor = np.load('data/rawcolor.npy')
+					# rawdepth = np.load('data/rawdepth.npy')
+					# rawcolor = np.load('data/rawcolor.npy')
 
 
 					rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
@@ -335,6 +333,7 @@ class DynamicProjection(object):
 					color = rgbd[:, :, 0: 3]
 					mask = depth_part >  0
 
+					cv.imshow('color', color)
 					cv.imwrite('data/capture/capture_' + c + '_'+ str(idx) + '.bmp', color)
 
 					corres = np.zeros([424, 512, 3], np.uint8)
