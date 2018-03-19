@@ -9,12 +9,12 @@ import ctypes
 import copy
 import time
 
-MODE = 2
+MODE = 1
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = True
+SAVE = False
 
 DATAPATH = '../DynamicProjectionData/'
 
@@ -276,6 +276,10 @@ class DynamicProjection(object):
 
 	def getRawDataWithKinect(self, save):
 		flag = False
+
+		rawdepth = np.zeros((424 * 512, 1))
+		rawcolor = np.zeros((1080 * 1092 * 4))
+
 		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 			
 			rawdepth = self.kinect.get_last_depth_frame()
@@ -286,6 +290,7 @@ class DynamicProjection(object):
 				np.save('data/rawcolor.npy', rawcolor)
 
 			flag = True
+
 
 		return flag, rawdepth, rawcolor
 
@@ -304,7 +309,7 @@ class DynamicProjection(object):
 			if t1 - t0 >= 1 and idx < 256 * 3: 
 
 				if MODE < 2:
-					flag, rawdepth, rawcolor = self.getRawDataWithKinect(not SAVE)
+					flag, rawdepth, rawcolor = self.getRawDataWithKinect(False)
 				else:
 					flag, rawdepth, rawcolor = self.getRawData()
 
