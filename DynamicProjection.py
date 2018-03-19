@@ -14,7 +14,7 @@ MODE = 2
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = False
+SAVE = True
 
 DATAPATH = '../DynamicProjectionData/'
 
@@ -336,6 +336,7 @@ class DynamicProjection(object):
 					x0, y0, x1, y1 = 60, 220, 270, 370
 					w, h = image.shape[0], image.shape[1]
 					corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
+					np.save(DATAPATH + 'corres/corres_' + c + '_' + str(idx % 256) + 'npy', corres)
 
 					self.project(rawdepth, corres, mask)
 
@@ -349,8 +350,8 @@ class DynamicProjection(object):
 		run = True
 
 		# do color Calibration
-		colorCalibration()
-		run = False
+		# self.colorCalibration()
+		# run = False
 
 
 		while run:
@@ -375,11 +376,12 @@ class DynamicProjection(object):
 				# color[100: 110, 230: 240] = np.array([255, 0, 0])
 
 				cv.imshow('depth', depth)
-				# cv.imshow('depth_part', depth_part)
 				cv.imshow('color', color)
+				# cv.imshow('depth_part', depth_part)
 
-				# cv.imwrite('data/depth.png', depth)
-				# cv.imwrite('data/color.png', color)
+				if SAVE:
+					cv.imwrite('data/depth.png', depth)
+					cv.imwrite('data/color.png', color)
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
@@ -403,6 +405,9 @@ class DynamicProjection(object):
 				# test position projection
 				# corres[200: 210, 250: 260] = np.array([255, 0, 0])
 				# corres[100: 110, 230: 240] = np.array([255, 0, 0])
+
+				if SAVE:
+					np.save('data/corres.npy', corres)
 
 				self.project(rawdepth, corres, mask)
 
