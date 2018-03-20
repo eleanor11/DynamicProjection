@@ -14,7 +14,7 @@ MODE = 1
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = False
+SAVE = True
 
 DATAPATH = '../DynamicProjectionData/'
 
@@ -63,6 +63,12 @@ class DynamicProjection(object):
 
 		self.depthback = np.zeros([424, 512, 1], np.uint8)
 		self.colorback = np.zeros([424, 512, 4], np.uint8)
+
+		#  init camera
+		
+		self.cap = cv.VideoCapture(0)  
+		self.cap.set(3, 1280)
+		self.cap.set(4, 960)
 
 
 
@@ -270,6 +276,7 @@ class DynamicProjection(object):
 	def getRawData(self):
 		rawdepth = np.load('data/rawdepth.npy')
 		rawcolor = np.load('data/rawcolor.npy')
+		cameraColor = np.load('data/cameraColor.npy')
 
 		return True, rawdepth, rawcolor
 
@@ -279,6 +286,7 @@ class DynamicProjection(object):
 
 		rawdepth = np.zeros((424 * 512, 1))
 		rawcolor = np.zeros((1080 * 1092 * 4))
+		cameraColor = np.zeros((1280 * 960 * 3))
 
 		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 			
@@ -292,7 +300,12 @@ class DynamicProjection(object):
 			flag = True
 
 
-		return flag, rawdepth, rawcolor
+		ret, cameraColor = self.cap.read()
+		if save:
+			np.save('data/cameraColor.npy', cameraColor)
+
+
+		return flag, rawdepth, rawcolor, cameraColor
 
 
 	def colorCalibration(self):
@@ -365,9 +378,9 @@ class DynamicProjection(object):
 				break
 
 			if MODE < 2:
-				flag, rawdepth, rawcolor = self.getRawDataWithKinect(SAVE)
+				flag, rawdepth, rawcolor, cameraColor = self.getRawDataWithKinect(SAVE)  
 			else:
-				flag, rawdepth, rawcolor = self.getRawData()
+				flag, rawdepth, rawcolor, cameraColor = self.getRawData()
 
 			if flag:
 
@@ -382,11 +395,13 @@ class DynamicProjection(object):
 
 				cv.imshow('depth', depth)
 				cv.imshow('color', color)
+				cv.imshow('cameraColor', cameraColor)
 				# cv.imshow('depth_part', depth_part)
 
 				if SAVE:
 					cv.imwrite('data/depth.png', depth)
 					cv.imwrite('data/color.png', color)
+					cv.imwrite('data/cameraColor.png', cameraColor)
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
