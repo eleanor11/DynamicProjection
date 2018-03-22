@@ -9,7 +9,7 @@ import ctypes
 import copy
 import time
 
-MODE = 0
+MODE = 1
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
