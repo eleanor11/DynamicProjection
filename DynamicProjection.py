@@ -9,7 +9,7 @@ import ctypes
 import copy
 import time
 
-MODE = 1
+MODE = 2
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
@@ -278,7 +278,7 @@ class DynamicProjection(object):
 		rawcolor = np.load('data/rawcolor.npy')
 		cameraColor = np.load('data/cameraColor.npy')
 
-		return True, rawdepth, rawcolor
+		return True, rawdepth, rawcolor, cameraColor
 
 
 	def getRawDataWithKinect(self, save):
@@ -310,56 +310,71 @@ class DynamicProjection(object):
 
 	def colorCalibration(self):
 
-		t0 = time.time()
 		idx = 0
 
-		while 1:
+		while idx < 256 * 3:
 			ch = cv.waitKey(1)
 			if ch == 27:
 				break
 
-			t1 = time.time()
-			if t1 - t0 >= 1 and idx < 256 * 3: 
+			print(idx)
 
+			c = 'r'
+			if idx >= 256:
+				c = 'g'
+			if idx >= 512:
+				c = 'b'
+
+			if MODE < 2:
+				flag, rawdepth, rawcolor, cameraColor = self.getRawDataWithKinect(SAVE)  
+			else:
+				flag, rawdepth, rawcolor, cameraColor = self.getRawData()
+
+			if flag:
+
+				rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
+				depth = rgbd[:, :, 3]
+				color = rgbd[:, :, 0: 3]
+				mask = depth_part >  0
+				corres = np.zeros([424, 512, 3], np.uint8)
+				corres[mask] = np.array([255, 255, 255])
+
+				# projection
+				image = cv.imread('{}calibration_color/im_{}_{}.bmp'.format(DATAPATH, c, idx % 256))
+				cv.imshow('image', image)
+				# bgr to rgb
+				image = image[..., ::-1]
+
+				x0, y0, x1, y1 = 60, 220, 270, 370
+				w, h = image.shape[0], image.shape[1]
+				corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
+				# np.save(DATAPATH + 'corres/corres_' + c + '_' + str(idx % 256) + '.npy', corres)
+
+				self.project(rawdepth, corres, mask)
+
+			# wait 2 seconds
+			t0 = time.time()
+			while time.time() - t0 < 1:
+				_ = 0
+
+			# capture image for 1 second
+			t0 = time.time()
+			while time.time() - t0 < 1:
 				if MODE < 2:
-					flag, rawdepth, rawcolor = self.getRawDataWithKinect(False)
+					ret, cameraColor = self.cap.read()
 				else:
-					flag, rawdepth, rawcolor = self.getRawData()
+					cameraColor = np.load('data/cameraColor.npy')
+					
+				cv.imshow('color', cameraColor)
+				cv.imwrite('{}capture/capture_{}_{}.bmp'.format(DATAPATH, c, idx % 256), cameraColor)
 
-				if flag:
-					print(idx)
-
-					c = 'r'
-					if idx >= 256:
-						c = 'g'
-					if idx >= 512:
-						c = 'b'
-
-					rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
-					depth = rgbd[:, :, 3]
-					color = rgbd[:, :, 0: 3]
-					mask = depth_part >  0
-
-					cv.imshow('color', color)
-					cv.imwrite(DATAPATH + 'capture/capture_' + c + '_'+ str(idx % 256) + '.bmp', color)
-
-					corres = np.zeros([424, 512, 3], np.uint8)
-					corres[mask] = np.array([255, 255, 255])
+			# wait 1 second
+			t0 = time.time()
+			while time.time() - t0 < 1:
+				_ = 0
 
 
-					image = cv.imread(DATAPATH + 'calibration_color/im_' + c + '_' + str(idx % 256) + '.bmp')
-					cv.imshow('image', image)
-					image = image[..., ::-1]
-
-					x0, y0, x1, y1 = 60, 220, 270, 370
-					w, h = image.shape[0], image.shape[1]
-					corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
-					np.save(DATAPATH + 'corres/corres_' + c + '_' + str(idx % 256) + 'npy', corres)
-
-					self.project(rawdepth, corres, mask)
-
-					t0 = t1
-					idx = idx + 1
+			idx = idx + 1
 
 
 
@@ -367,9 +382,9 @@ class DynamicProjection(object):
 
 		run = True
 
-		# do color Calibration
-		# self.colorCalibration()
-		# run = False
+		# # do color Calibration
+		self.colorCalibration()
+		run = False
 
 
 		while run:
@@ -428,6 +443,7 @@ class DynamicProjection(object):
 
 				if SAVE:
 					np.save('data/corres.npy', corres)
+					np.save('data/depth_part.npy', depth_part)
 
 				self.project(rawdepth, corres, mask)
 
