@@ -69,6 +69,8 @@ class DynamicProjection(object):
 		self.cap = cv.VideoCapture(0)  
 		self.cap.set(3, 1280)
 		self.cap.set(4, 960)
+		self.cap.set(10, 0.0)		# brightness
+		self.cap.set(15, -6.0)		# exposure
 
 
 
@@ -345,7 +347,7 @@ class DynamicProjection(object):
 				# bgr to rgb
 				image = image[..., ::-1]
 
-				x0, y0, x1, y1 = 60, 220, 270, 370
+				x0, y0, x1, y1 = 120, 205, 290, 335
 				w, h = image.shape[0], image.shape[1]
 				corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
 				# np.save(DATAPATH + 'corres/corres_' + c + '_' + str(idx % 256) + '.npy', corres)
@@ -366,7 +368,8 @@ class DynamicProjection(object):
 					cameraColor = np.load('data/cameraColor.npy')
 					
 				cv.imshow('color', cameraColor)
-				cv.imwrite('{}capture/capture_{}_{}.bmp'.format(DATAPATH, c, idx % 256), cameraColor)
+				cv.imwrite('{}capture_color/capture_{}_{}.bmp'.format(DATAPATH, c, idx % 256), cameraColor)
+				# cv.imwrite('color{}.bmp'.format(idx), cameraColor)
 
 			# wait 1 second
 			t0 = time.time()
@@ -382,7 +385,7 @@ class DynamicProjection(object):
 
 		run = True
 
-		# # do color Calibration
+		# # # do color Calibration
 		# self.colorCalibration()
 		# run = False
 
@@ -432,9 +435,9 @@ class DynamicProjection(object):
 				image = cv.imread('data/image.bmp')
 				image = image[..., ::-1]
 
-				x0, y0, x1, y1 = 60, 220, 270, 370
+				x0, y0, x1, y1 = 120, 205, 290, 335
 				w, h = image.shape[0], image.shape[1]
-				corres[x0: x1, y0: y1] = np.array([[image[int((i - 60) / 210 * h), int((369 - j) / 150 * w)] for j in range(y0, y1)] for i in range(x0, x1)])
+				corres[x0: x1, y0: y1] = np.array([[image[int((i - x0) / (x1 - x0) * h), int((y1 - 1 - j) / (y1 - y0) * w)] for j in range(y0, y1)] for i in range(x0, x1)])
 
 
 				# test position projection
