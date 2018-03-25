@@ -9,7 +9,7 @@ import ctypes
 import copy
 import time
 
-MODE = 2
+MODE = 1
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
@@ -37,17 +37,17 @@ class DynamicProjection(object):
 		self.fy = 365.753
 		
 		self.t = [ 
-            -6.605526567528476,
-0.26304782913798885,
--3.1973849931787215,
-0.9466405153391922,
--0.15190342241265045,
-9.212334892098893,
--4.183943329107465,
-1.3119524961657432,
--0.060094286611505676,
-0.6153242596659874,
--5.836571238517149
+            -7.517246646433162,
+0.43210832349956646,
+-3.6190140901470293,
+0.9668409943035755,
+-0.15296828300679596,
+10.71404717765025,
+-4.1966722473037015,
+1.5030783569335278,
+-0.07908378457766652,
+0.996679151785893,
+-6.519932108201286
 
 		]
 
@@ -383,8 +383,8 @@ class DynamicProjection(object):
 		run = True
 
 		# # do color Calibration
-		self.colorCalibration()
-		run = False
+		# self.colorCalibration()
+		# run = False
 
 
 		while run:
