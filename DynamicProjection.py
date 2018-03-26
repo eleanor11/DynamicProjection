@@ -9,7 +9,7 @@ import ctypes
 import copy
 import time
 
-MODE = 1
+MODE = 2
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
@@ -350,31 +350,10 @@ class DynamicProjection(object):
 				x0, y0, x1, y1 = 120, 205, 290, 335
 				w, h = image.shape[0], image.shape[1]
 				corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
-				# np.save(DATAPATH + 'corres/corres_' + c + '_' + str(idx % 256) + '.npy', corres)
+				np.save('{}corres/corres_{}_{}.npy'.format(DATAPATH, c, idx % 256), corres)
+
 
 				self.project(rawdepth, corres, mask)
-
-			# wait 2 seconds
-			t0 = time.time()
-			while time.time() - t0 < 1:
-				_ = 0
-
-			# capture image for 1 second
-			t0 = time.time()
-			while time.time() - t0 < 1:
-				if MODE < 2:
-					ret, cameraColor = self.cap.read()
-				else:
-					cameraColor = np.load('data/cameraColor.npy')
-					
-				cv.imshow('color', cameraColor)
-				cv.imwrite('{}capture_color/capture_{}_{}.bmp'.format(DATAPATH, c, idx % 256), cameraColor)
-				# cv.imwrite('color{}.bmp'.format(idx), cameraColor)
-
-			# wait 1 second
-			t0 = time.time()
-			while time.time() - t0 < 1:
-				_ = 0
 
 
 			idx = idx + 1
@@ -385,9 +364,9 @@ class DynamicProjection(object):
 
 		run = True
 
-		# # # do color Calibration
-		# self.colorCalibration()
-		# run = False
+		# # do color Calibration
+		self.colorCalibration()
+		run = False
 
 
 		while run:
