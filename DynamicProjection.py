@@ -355,6 +355,28 @@ class DynamicProjection(object):
 
 				self.project(rawdepth, corres, mask)
 
+			# wait 2 seconds
+			t0 = time.time()
+			while time.time() - t0 < 1:
+				_ = 0
+
+			# capture image for 1 second
+			t0 = time.time()
+			while time.time() - t0 < 1:
+				if MODE < 2:
+					ret, cameraColor = self.cap.read()
+				else:
+					cameraColor = np.load('data/cameraColor.npy')
+					
+				cv.imshow('color', cameraColor)
+				cv.imwrite('{}capture_color/capture_{}_{}.bmp'.format(DATAPATH, c, idx % 256), cameraColor)
+				# cv.imwrite('color{}.bmp'.format(idx), cameraColor)
+
+			# wait 1 second
+			t0 = time.time()
+			while time.time() - t0 < 1:
+				_ = 0
+
 
 			idx = idx + 1
 
