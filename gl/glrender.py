@@ -102,15 +102,14 @@ class GLRenderer(object):
 
 
 		shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
+		# shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
 		self.kd = glGetUniformLocation(self.program, 'kd')
 		self.ld = glGetUniformLocation(self.program, 'ld')
 		self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
+		self.lightColor = glGetUniformLocation(self.program, 'lightColor')
 
-		# self.program.setUniform("kd", 0.6, 0.9, 0.9)
-		# self.program.setUniform("ld", 1.0, 1.0, 1.0)
-		# self.program.setUniform("lightPosition", 0.0, 10.0, 0.0)
 
 		# glEnableVertexAttribArray(2)
 		# self.texture = LoadTexture("data/image.bmp")
@@ -120,15 +119,14 @@ class GLRenderer(object):
 
 
 
-
-
 	def draw(self, vertices, colors, normals, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program)
-		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
-		glUniform3fv(self.kd, 1, np.array((0.6, 0.9, 0.9), np.float32))
+		glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
 		glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
-		glUniform3fv(self.lightPosition, 1, np.array((0.0, 1.0, 0.0), np.float32))
+		glUniform3fv(self.lightPosition, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)

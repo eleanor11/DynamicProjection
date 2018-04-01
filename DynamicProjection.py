@@ -263,7 +263,6 @@ class DynamicProjection(object):
 
 
 		position = np.array([[[i, j] for j in range(512)] for i in range(424)])
-
 		pos0 = np.concatenate([position[cul_cmask], position[cdr_cmask]], 0)
 		pos1 = np.concatenate([position[cul_umask], position[cdr_dmask]], 0)
 		pos2 = np.concatenate([position[cul_lmask], position[cdr_rmask]], 0)
@@ -273,16 +272,16 @@ class DynamicProjection(object):
 		surface_normals = np.cross(p1 - p0, p2 - p1)
 
 		vertex_normals = np.zeros((424, 512, 3), np.float32)
-		for i in range(num):
-			vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
-			vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
-			vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
+		# for i in range(num):
+		# 	vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
+		# 	vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
+		# 	vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
 
 		normals = np.zeros((num * 3, 3), np.float32)
-		for i in range(num):
-			normals[i * 3] = vertex_normals[pos0[i, 0], pos0[i, 1]]
-			normals[i * 3 + 1] = vertex_normals[pos1[i, 0], pos1[i, 1]]
-			normals[i * 3 + 2] = vertex_normals[pos2[i, 0], pos2[i, 1]]
+		# for i in range(num):
+		# 	normals[i * 3] = vertex_normals[pos0[i, 0], pos0[i, 1]]
+		# 	normals[i * 3 + 1] = vertex_normals[pos1[i, 0], pos1[i, 1]]
+		# 	normals[i * 3 + 2] = vertex_normals[pos2[i, 0], pos2[i, 1]]
 
 
 		
@@ -313,6 +312,8 @@ class DynamicProjection(object):
 
 
 	def getRawDataWithKinect(self, save):
+		print('getRawDataWithKinect')
+
 		flag = False
 
 		rawdepth = np.zeros((424 * 512, 1))
@@ -415,6 +416,50 @@ class DynamicProjection(object):
 			idx = idx + 1
 
 
+	def getSceneData(self):
+
+		idx = 0
+
+		while idx < 2:
+
+			print(idx)
+
+			ch = cv.waitKey(1)
+			if ch == 27:
+				break
+
+			# wait 10 seconds
+			t0 = time.time()
+			while time.time() - t0 < 10:
+				_ = 0
+
+			print('start')
+
+			if MODE < 2:
+				flag, rawdepth, rawcolor, cameraColor = self.getRawDataWithKinect(False)  
+			else:
+				flag, rawdepth, rawcolor, cameraColor = self.getRawData()
+
+			if flag:
+
+				rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
+				depth = rgbd[:, :, 3]
+				color = rgbd[:, :, 0: 3]
+
+				
+				cv.imwrite('{}data/{}/depth.png'.format(DATAPATH, idx), depth)
+				cv.imwrite('{}data/{}/color.png'.format(DATAPATH, idx), color)
+				cv.imwrite('{}data/{}/cameraColor.png'.format(DATAPATH, idx), cameraColor)
+				cv.imwrite('{}data/cameraColor{}.png'.format(DATAPATH, idx), cameraColor)
+				np.save('{}data/{}/rawdepth.npy'.format(DATAPATH, idx), rawdepth)
+				np.save('{}data/{}/rawcolor.npy'.format(DATAPATH, idx), rawcolor)
+				np.save('{}data/{}/cameraColor.npy'.format(DATAPATH, idx), cameraColor)
+
+				cv.imshow('cameraColor', cameraColor)
+
+
+			idx = idx + 1
+
 
 	def run(self):
 
@@ -422,6 +467,10 @@ class DynamicProjection(object):
 
 		# # do color Calibration
 		# self.colorCalibration()
+		# run = False
+
+		# # record data
+		# self.getSceneData()
 		# run = False
 
 
@@ -448,7 +497,7 @@ class DynamicProjection(object):
 
 				cv.imshow('depth', depth)
 				cv.imshow('color', color)
-				cv.imshow('cameraColor', cameraColor)
+				# cv.imshow('cameraColor', cameraColor)
 				# cv.imshow('depth_part', depth_part)
 
 				if SAVE:
