@@ -61,7 +61,8 @@ class GLRenderer(object):
 		# glutInitWindowPosition(0, 0)
 		glutInitWindowSize(self.width, self.height)
 		self.window = glutCreateWindow(name)
-		glutFullScreen()
+		# glutFullScreen()
+		# glutEnterGameMode()
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_DEPTH_TEST)
 		glDepthFunc(GL_LESS)
@@ -70,6 +71,7 @@ class GLRenderer(object):
 		glBindVertexArray(self.vertexArr)
 		self.vertexBuf = glGenBuffers(1)
 		self.colorBuf = glGenBuffers(1)
+		self.normalBuf = glGenBuffers(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
 		self.toTexture = toTexture
@@ -102,6 +104,13 @@ class GLRenderer(object):
 		shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
+		self.kd = glGetUniformLocation(self.program, 'kd')
+		self.ld = glGetUniformLocation(self.program, 'ld')
+		self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
+
+		# self.program.setUniform("kd", 0.6, 0.9, 0.9)
+		# self.program.setUniform("ld", 1.0, 1.0, 1.0)
+		# self.program.setUniform("lightPosition", 0.0, 10.0, 0.0)
 
 		# glEnableVertexAttribArray(2)
 		# self.texture = LoadTexture("data/image.bmp")
@@ -113,10 +122,13 @@ class GLRenderer(object):
 
 
 
-	def draw(self, vertices, colors, mvp):
+	def draw(self, vertices, colors, normals, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program)
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
+		glUniform3fv(self.kd, 1, np.array((0.6, 0.9, 0.9), np.float32))
+		glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		glUniform3fv(self.lightPosition, 1, np.array((0.0, 1.0, 0.0), np.float32))
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)
@@ -142,12 +154,26 @@ class GLRenderer(object):
 			None
 		)
 
+		glEnableVertexAttribArray(2)
+		glBindBuffer(GL_ARRAY_BUFFER, self.normalBuf)
+		glBufferData(GL_ARRAY_BUFFER, normals, GL_STATIC_DRAW)
+		glVertexAttribPointer(
+			2, 
+			normals.shape[1],
+			GL_FLOAT, 
+			GL_FALSE, 
+			0, 
+			None
+		)
+
+
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		# glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 		glDrawArrays(GL_TRIANGLES, 0, vertices.shape[0])
 
 		glDisableVertexAttribArray(0)
 		glDisableVertexAttribArray(1)
+		glDisableVertexAttribArray(2)
 		glUseProgram(0)
 		glutSwapBuffers()
 

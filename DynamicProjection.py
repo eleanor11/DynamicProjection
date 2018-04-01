@@ -9,12 +9,12 @@ import ctypes
 import copy
 import time
 
-MODE = 2
+MODE = 1
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = True
+SAVE = False
 
 DATAPATH = '../DynamicProjectionData/'
 
@@ -70,8 +70,11 @@ class DynamicProjection(object):
 		self.cap.set(3, 1280)
 		self.cap.set(4, 960)
 		self.cap.set(10, 0.0)		# brightness
+		self.cap.set(11, 0.0)
+		self.cap.set(12, 58.0)
+		self.cap.set(13, 0.0)
 		self.cap.set(15, -6.0)		# exposure
-
+		self.cap.set(17, 4600)
 
 
 	def c2d(self, rawdepth, rawcolor):
@@ -258,6 +261,30 @@ class DynamicProjection(object):
 		vertices = np.zeros([num * 3, 3], np.float32)
 		vertices[0::3, :], vertices[1::3, :], vertices[2::3, :] = p0, p1, p2
 
+
+		position = np.array([[[i, j] for j in range(512)] for i in range(424)])
+
+		pos0 = np.concatenate([position[cul_cmask], position[cdr_cmask]], 0)
+		pos1 = np.concatenate([position[cul_umask], position[cdr_dmask]], 0)
+		pos2 = np.concatenate([position[cul_lmask], position[cdr_rmask]], 0)
+
+		# surface normal
+		surface_normals = np.zeros([num, 3], np.float32)
+		surface_normals = np.cross(p1 - p0, p2 - p1)
+
+		vertex_normals = np.zeros((424, 512, 3), np.float32)
+		for i in range(num):
+			vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
+			vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
+			vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
+
+		normals = np.zeros((num * 3, 3), np.float32)
+		for i in range(num):
+			normals[i * 3] = vertex_normals[pos0[i, 0], pos0[i, 1]]
+			normals[i * 3 + 1] = vertex_normals[pos1[i, 0], pos1[i, 1]]
+			normals[i * 3 + 2] = vertex_normals[pos2[i, 0], pos2[i, 1]]
+
+
 		
 		corres[:, 0], corres[:, 2] = corres[:, 2], corres[:, 0]
 
@@ -270,9 +297,11 @@ class DynamicProjection(object):
 		colors[0::3, :], colors[1::3, :], colors[2::3, :] = c0, c1, c2
 
 
+
+
 		# np.save('vertices.npy', vertices)
 
-		self.render.draw(vertices, colors, self.mvp.T)
+		self.render.draw(vertices, colors, normals, self.mvp.T)
 
 
 	def getRawData(self):
@@ -312,7 +341,8 @@ class DynamicProjection(object):
 
 	def colorCalibration(self):
 
-		idx = 0
+		# idx = 0
+		idx = 510
 
 		while idx < 256 * 3:
 			ch = cv.waitKey(1)
@@ -350,14 +380,18 @@ class DynamicProjection(object):
 				x0, y0, x1, y1 = 120, 205, 290, 335
 				w, h = image.shape[0], image.shape[1]
 				corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
-				np.save('{}corres/corres_{}_{}.npy'.format(DATAPATH, c, idx % 256), corres)
+				# np.save('{}corres/corres_{}_{}.npy'.format(DATAPATH, c, idx % 256), corres)
 
 
 				self.project(rawdepth, corres, mask)
 
+			t = 2
+			if idx == 0:
+				t = 5
+
 			# wait 2 seconds
 			t0 = time.time()
-			while time.time() - t0 < 1:
+			while time.time() - t0 < t:
 				_ = 0
 
 			# capture image for 1 second
@@ -369,7 +403,7 @@ class DynamicProjection(object):
 					cameraColor = np.load('data/cameraColor.npy')
 					
 				cv.imshow('color', cameraColor)
-				cv.imwrite('{}capture_color/capture_{}_{}.bmp'.format(DATAPATH, c, idx % 256), cameraColor)
+				cv.imwrite('{}capture_color/capture_{}_{}.png'.format(DATAPATH, c, idx % 256), cameraColor)
 				# cv.imwrite('color{}.bmp'.format(idx), cameraColor)
 
 			# wait 1 second
@@ -387,8 +421,8 @@ class DynamicProjection(object):
 		run = True
 
 		# # do color Calibration
-		self.colorCalibration()
-		run = False
+		# self.colorCalibration()
+		# run = False
 
 
 		while run:
