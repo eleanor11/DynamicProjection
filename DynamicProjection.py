@@ -312,7 +312,6 @@ class DynamicProjection(object):
 
 
 	def getRawDataWithKinect(self, save):
-		print('getRawDataWithKinect')
 
 		flag = False
 
@@ -418,9 +417,9 @@ class DynamicProjection(object):
 
 	def getSceneData(self):
 
-		idx = 0
+		idx = 6
 
-		while idx < 2:
+		while idx < 10:
 
 			print(idx)
 
