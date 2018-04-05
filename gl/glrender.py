@@ -62,7 +62,7 @@ class GLRenderer(object):
 		glutInitWindowSize(self.width, self.height)
 		self.window = glutCreateWindow(name)
 		# glutFullScreen()
-		# glutEnterGameMode()
+		glutEnterGameMode()
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_DEPTH_TEST)
 		glDepthFunc(GL_LESS)
@@ -105,10 +105,10 @@ class GLRenderer(object):
 		# shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
-		self.kd = glGetUniformLocation(self.program, 'kd')
-		self.ld = glGetUniformLocation(self.program, 'ld')
-		self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
-		self.lightColor = glGetUniformLocation(self.program, 'lightColor')
+		# self.kd = glGetUniformLocation(self.program, 'kd')
+		# self.ld = glGetUniformLocation(self.program, 'ld')
+		# self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
+		# self.lightColor = glGetUniformLocation(self.program, 'lightColor')
 
 
 		# glEnableVertexAttribArray(2)
@@ -122,11 +122,12 @@ class GLRenderer(object):
 	def draw(self, vertices, colors, normals, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program)
-		glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
-		glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
-		glUniform3fv(self.lightPosition, 1, np.array((1.0, 1.0, 1.0), np.float32))
-		glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
+
+		# glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
+		# glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		# glUniform3fv(self.lightPosition, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		# glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)

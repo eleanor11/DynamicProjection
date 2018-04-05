@@ -342,7 +342,11 @@ class DynamicProjection(object):
 	def colorCalibration(self):
 
 		# idx = 0
-		idx = 510
+		idx = -10
+
+		while idx < 0:
+			idx += 1
+			self.getRawDataWithKinect(False)
 
 		while idx < 256 * 3:
 			ch = cv.waitKey(1)
@@ -381,7 +385,6 @@ class DynamicProjection(object):
 				w, h = image.shape[0], image.shape[1]
 				corres[x0: x1, y0: y1] = np.array([[image[i - x0, j - y0] for j in range(y0, y1)] for i in range(x0, x1)])
 				# np.save('{}corres/corres_{}_{}.npy'.format(DATAPATH, c, idx % 256), corres)
-
 
 				self.project(rawdepth, corres, mask)
 
@@ -464,9 +467,9 @@ class DynamicProjection(object):
 
 		run = True
 
-		# # do color Calibration
-		# self.colorCalibration()
-		# run = False
+		# do color Calibration
+		self.colorCalibration()
+		run = False
 
 		# # record data
 		# self.getSceneData()
