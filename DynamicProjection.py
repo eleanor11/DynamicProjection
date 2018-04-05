@@ -213,13 +213,13 @@ class DynamicProjection(object):
 			self.depthback = back[:, :, 3]
 			self.colorback = back[:, :, 0: 3]
 
-			np.save('data/depthback_origin.npy', self.depthback_origin)
-			np.save('data/colorback_origin.npy', self.colorback_origin)
+			np.save(DATAPATH + 'data/depthback_origin.npy', self.depthback_origin)
+			np.save(DATAPATH + 'data/colorback_origin.npy', self.colorback_origin)
 
 		else: 
 
-			self.depthback_origin = np.load('data/depthback_origin.npy')
-			self.colorback_origin = np.load('data/colorback_origin.npy')
+			self.depthback_origin = np.load(DATAPATH + 'data/depthback_origin.npy')
+			self.colorback_origin = np.load(DATAPATH + 'data/colorback_origin.npy')
 
 
 	def project(self, rawdepth, corres, mask):
@@ -304,9 +304,9 @@ class DynamicProjection(object):
 
 
 	def getRawData(self):
-		rawdepth = np.load('data/rawdepth.npy')
-		rawcolor = np.load('data/rawcolor.npy')
-		cameraColor = np.load('data/cameraColor.npy')
+		rawdepth = np.load(DATAPATH + 'data/rawdepth.npy')
+		rawcolor = np.load(DATAPATH + 'data/rawcolor.npy')
+		cameraColor = np.load(DATAPATH + 'data/cameraColor.npy')
 
 		return True, rawdepth, rawcolor, cameraColor
 
@@ -325,15 +325,15 @@ class DynamicProjection(object):
 			rawcolor = self.kinect.get_last_color_frame()
 
 			if save:
-				np.save('data/rawdepth.npy', rawdepth)
-				np.save('data/rawcolor.npy', rawcolor)
+				np.save(DATAPATH + 'data/rawdepth.npy', rawdepth)
+				np.save(DATAPATH + 'data/rawcolor.npy', rawcolor)
 
 			flag = True
 
 
 		ret, cameraColor = self.cap.read()
 		if save:
-			np.save('data/cameraColor.npy', cameraColor)
+			np.save(DATAPATH + 'data/cameraColor.npy', cameraColor)
 
 
 		return flag, rawdepth, rawcolor, cameraColor
@@ -500,9 +500,9 @@ class DynamicProjection(object):
 				# cv.imshow('depth_part', depth_part)
 
 				if SAVE:
-					cv.imwrite('data/depth.png', depth)
-					cv.imwrite('data/color.png', color)
-					cv.imwrite('data/cameraColor.png', cameraColor)
+					cv.imwrite(DATAPATH + 'data/depth.png', depth)
+					cv.imwrite(DATAPATH + 'data/color.png', color)
+					cv.imwrite(DATAPATH + 'data/cameraColor.png', cameraColor)
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
@@ -515,7 +515,7 @@ class DynamicProjection(object):
 
 
 				# test image projection
-				image = cv.imread('data/image.bmp')
+				image = cv.imread(DATAPATH + 'data/image.bmp')
 				image = image[..., ::-1]
 
 				x0, y0, x1, y1 = 120, 205, 290, 335
@@ -528,8 +528,8 @@ class DynamicProjection(object):
 				# corres[100: 110, 230: 240] = np.array([255, 0, 0])
 
 				if SAVE:
-					np.save('data/corres.npy', corres)
-					np.save('data/depth_part.npy', depth_part)
+					np.save(DATAPATH + 'data/corres.npy', corres)
+					np.save(DATAPATH + 'data/depth_part.npy', depth_part)
 
 				self.project(rawdepth, corres, mask)
 
