@@ -4,6 +4,12 @@ from OpenGL.GL import *
 import numpy as np
 import PIL.Image as im
 
+PROJECTION_MODE = True
+
+# 0: default	1: test
+SHADER = 0
+
+
 def LoadProgram(shaderPathList):
 	shaderTypeMapping = {
 		'vs': GL_VERTEX_SHADER, 
@@ -57,12 +63,13 @@ class GLRenderer(object):
 		glutInit()
 		displayMode = GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH | GLUT_STENCIL
 		glutInitDisplayMode(displayMode)
-		glutInitWindowPosition(1920, 0)
-		# glutInitWindowPosition(0, 0)
+		glutInitWindowPosition(0, 0)
+		if PROJECTION_MODE:
+			glutInitWindowPosition(1920, 0)
+			glutEnterGameMode()
 		glutInitWindowSize(self.width, self.height)
 		self.window = glutCreateWindow(name)
 		# glutFullScreen()
-		glutEnterGameMode()
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_DEPTH_TEST)
 		glDepthFunc(GL_LESS)
@@ -100,15 +107,18 @@ class GLRenderer(object):
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.texColor, 0)
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.texDepth, 0)
 
-
-		shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
-		# shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
+		if SHADER == 0:
+			shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
+		elif SHADER == 1:
+			shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
-		# self.kd = glGetUniformLocation(self.program, 'kd')
-		# self.ld = glGetUniformLocation(self.program, 'ld')
-		# self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
-		# self.lightColor = glGetUniformLocation(self.program, 'lightColor')
+
+		if SHADER == 1:
+			self.kd = glGetUniformLocation(self.program, 'kd')
+			self.ld = glGetUniformLocation(self.program, 'ld')
+			self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
+			self.lightColor = glGetUniformLocation(self.program, 'lightColor')
 
 
 		# glEnableVertexAttribArray(2)
@@ -124,10 +134,11 @@ class GLRenderer(object):
 		glUseProgram(self.program)
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
 
-		# glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
-		# glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
-		# glUniform3fv(self.lightPosition, 1, np.array((1.0, 1.0, 1.0), np.float32))
-		# glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		if SHADER == 1:
+			glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
+			glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
+			glUniform3fv(self.lightPosition, 1, np.array((1.0, 1.0, 1.0), np.float32))
+			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)

@@ -9,7 +9,7 @@ import ctypes
 import copy
 import time
 
-MODE = 1
+MODE = 2
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
@@ -152,9 +152,9 @@ class DynamicProjection(object):
 			if MODE < 2: 
 				rgbd = self.d2c(rawdepth, rawcolor)
 				if SAVE:
-					np.save("data/rgbd.npy", rgbd)
+					np.save(DATAPATH + "data/rgbd.npy", rgbd)
 			else: 
-				rgbd = np.load("data/rgbd.npy")
+				rgbd = np.load(DATAPATH + "data/rgbd.npy")
 
 		else:
 
@@ -162,9 +162,9 @@ class DynamicProjection(object):
 			if MODE < 2:
 				rgbd = self.c2d(rawdepth, rawcolor)
 				if SAVE: 
-					np.save("data/rgbd.npy", rgbd)
+					np.save(DATAPATH + "data/rgbd.npy", rgbd)
 			else: 
-				rgbd = np.load("data/rgbd.npy")
+				rgbd = np.load(DATAPATH + "data/rgbd.npy")
 
 
 		# trun raw depth into gray image
@@ -372,6 +372,7 @@ class DynamicProjection(object):
 				depth = rgbd[:, :, 3]
 				color = rgbd[:, :, 0: 3]
 				mask = depth_part >  0
+				mask[120: 290, 205: 335] = True
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
 
@@ -403,7 +404,7 @@ class DynamicProjection(object):
 				if MODE < 2:
 					ret, cameraColor = self.cap.read()
 				else:
-					cameraColor = np.load('data/cameraColor.npy')
+					cameraColor = np.load(DATAPATH + 'data/cameraColor.npy')
 					
 				cv.imshow('color', cameraColor)
 				cv.imwrite('{}capture_color/capture_{}_{}.png'.format(DATAPATH, c, idx % 256), cameraColor)
