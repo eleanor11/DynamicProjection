@@ -7,7 +7,7 @@ import PIL.Image as im
 PROJECTION_MODE = False
 
 # 0: default	1: test
-SHADER = 0
+SHADER = 1
 
 
 def LoadProgram(shaderPathList):

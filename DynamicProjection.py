@@ -9,7 +9,7 @@ import ctypes
 import copy
 import time
 
-MODE = 2
+MODE = 0
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
@@ -17,7 +17,7 @@ MODE = 2
 SAVE = False
 
 DATAPATH = '../DynamicProjectionData/'
-
+SUB = 'data/data_body/0/'
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -152,9 +152,9 @@ class DynamicProjection(object):
 			if MODE < 2: 
 				rgbd = self.d2c(rawdepth, rawcolor)
 				if SAVE:
-					np.save(DATAPATH + "data/rgbd.npy", rgbd)
+					np.save(DATAPATH + SUB + "rgbd.npy", rgbd)
 			else: 
-				rgbd = np.load(DATAPATH + "data/rgbd.npy")
+				rgbd = np.load(DATAPATH + SUB + "rgbd.npy")
 
 		else:
 
@@ -162,9 +162,9 @@ class DynamicProjection(object):
 			if MODE < 2:
 				rgbd = self.c2d(rawdepth, rawcolor)
 				if SAVE: 
-					np.save(DATAPATH + "data/rgbd.npy", rgbd)
+					np.save(DATAPATH + SUB + "rgbd.npy", rgbd)
 			else: 
-				rgbd = np.load(DATAPATH + "data/rgbd.npy")
+				rgbd = np.load(DATAPATH + SUB + "rgbd.npy")
 
 
 		# trun raw depth into gray image
@@ -213,13 +213,14 @@ class DynamicProjection(object):
 			self.depthback = back[:, :, 3]
 			self.colorback = back[:, :, 0: 3]
 
-			np.save(DATAPATH + 'data/depthback_origin.npy', self.depthback_origin)
-			np.save(DATAPATH + 'data/colorback_origin.npy', self.colorback_origin)
+			if SAVE:
+				np.save(DATAPATH + SUB + 'depthback_origin.npy', self.depthback_origin)
+				np.save(DATAPATH + SUB + 'colorback_origin.npy', self.colorback_origin)
 
 		else: 
 
-			self.depthback_origin = np.load(DATAPATH + 'data/depthback_origin.npy')
-			self.colorback_origin = np.load(DATAPATH + 'data/colorback_origin.npy')
+			self.depthback_origin = np.load(DATAPATH + SUB + 'depthback_origin.npy')
+			self.colorback_origin = np.load(DATAPATH + SUB + 'colorback_origin.npy')
 
 
 	def project(self, rawdepth, corres, mask):
@@ -304,9 +305,9 @@ class DynamicProjection(object):
 
 
 	def getRawData(self):
-		rawdepth = np.load(DATAPATH + 'data/rawdepth.npy')
-		rawcolor = np.load(DATAPATH + 'data/rawcolor.npy')
-		cameraColor = np.load(DATAPATH + 'data/cameraColor.npy')
+		rawdepth = np.load(DATAPATH + SUB + 'rawdepth.npy')
+		rawcolor = np.load(DATAPATH + SUB + 'rawcolor.npy')
+		cameraColor = np.load(DATAPATH + SUB + 'cameraColor.npy')
 
 		return True, rawdepth, rawcolor, cameraColor
 
@@ -325,15 +326,15 @@ class DynamicProjection(object):
 			rawcolor = self.kinect.get_last_color_frame()
 
 			if save:
-				np.save(DATAPATH + 'data/rawdepth.npy', rawdepth)
-				np.save(DATAPATH + 'data/rawcolor.npy', rawcolor)
+				np.save(DATAPATH + SUB + 'rawdepth.npy', rawdepth)
+				np.save(DATAPATH + SUB + 'rawcolor.npy', rawcolor)
 
 			flag = True
 
 
 		ret, cameraColor = self.cap.read()
 		if save:
-			np.save(DATAPATH + 'data/cameraColor.npy', cameraColor)
+			np.save(DATAPATH + SUB + 'cameraColor.npy', cameraColor)
 
 
 		return flag, rawdepth, rawcolor, cameraColor
@@ -404,7 +405,7 @@ class DynamicProjection(object):
 				if MODE < 2:
 					ret, cameraColor = self.cap.read()
 				else:
-					cameraColor = np.load(DATAPATH + 'data/cameraColor.npy')
+					cameraColor = np.load(DATAPATH + SUB + 'cameraColor.npy')
 					
 				cv.imshow('color', cameraColor)
 				cv.imwrite('{}capture_color/capture_{}_{}.png'.format(DATAPATH, c, idx % 256), cameraColor)
@@ -421,44 +422,52 @@ class DynamicProjection(object):
 
 	def getSceneData(self):
 
-		idx = 6
+		idx = -10 + 10
 
-		while idx < 10:
+		while idx < 0 + 10:
+			idx += 1
+			self.getRawDataWithKinect(False)
 
+		while idx < 10 + 5:
 			print(idx)
 
 			ch = cv.waitKey(1)
 			if ch == 27:
 				break
 
-			# wait 10 seconds
+			# wait 5 seconds
 			t0 = time.time()
-			while time.time() - t0 < 10:
+			while time.time() - t0 < 5:
 				_ = 0
 
 			print('start')
 
-			if MODE < 2:
-				flag, rawdepth, rawcolor, cameraColor = self.getRawDataWithKinect(False)  
-			else:
-				flag, rawdepth, rawcolor, cameraColor = self.getRawData()
+			# capture for 2 seconds
+			t0 = time.time()
+			while time.time() - t0 < 2:
+				if MODE < 2:
+					flag, rawdepth, rawcolor, cameraColor = self.getRawDataWithKinect(False)  
+				else:
+					flag, rawdepth, rawcolor, cameraColor = self.getRawData()
 
-			if flag:
+				if flag:
 
-				rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
-				depth = rgbd[:, :, 3]
-				color = rgbd[:, :, 0: 3]
+					rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
+					depth = rgbd[:, :, 3]
+					color = rgbd[:, :, 0: 3]
 
-				
-				cv.imwrite('{}data/{}/depth.png'.format(DATAPATH, idx), depth)
-				cv.imwrite('{}data/{}/color.png'.format(DATAPATH, idx), color)
-				cv.imwrite('{}data/{}/cameraColor.png'.format(DATAPATH, idx), cameraColor)
-				cv.imwrite('{}data/cameraColor{}.png'.format(DATAPATH, idx), cameraColor)
-				np.save('{}data/{}/rawdepth.npy'.format(DATAPATH, idx), rawdepth)
-				np.save('{}data/{}/rawcolor.npy'.format(DATAPATH, idx), rawcolor)
-				np.save('{}data/{}/cameraColor.npy'.format(DATAPATH, idx), cameraColor)
+					cv.imwrite('{}data/{}/depth.png'.format(DATAPATH, idx), depth)
+					cv.imwrite('{}data/{}/color.png'.format(DATAPATH, idx), color)
+					cv.imwrite('{}data/{}/cameraColor.png'.format(DATAPATH, idx), cameraColor)
+					cv.imwrite('{}data/cameraColor{}.png'.format(DATAPATH, idx), cameraColor)
+					np.save('{}data/{}/depthback_origin.npy'.format(DATAPATH, idx), self.depthback_origin)
+					np.save('{}data/{}/colorback_origin.npy'.format(DATAPATH, idx), self.colorback_origin)
+					np.save('{}data/{}/rgbd.npy'.format(DATAPATH, idx), rgbd)
+					np.save('{}data/{}/rawdepth.npy'.format(DATAPATH, idx), rawdepth)
+					np.save('{}data/{}/rawcolor.npy'.format(DATAPATH, idx), rawcolor)
+					np.save('{}data/{}/cameraColor.npy'.format(DATAPATH, idx), cameraColor)
 
-				cv.imshow('cameraColor', cameraColor)
+					cv.imshow('cameraColor', cameraColor)
 
 
 			idx = idx + 1
@@ -468,13 +477,13 @@ class DynamicProjection(object):
 
 		run = True
 
-		# do color Calibration
-		self.colorCalibration()
-		run = False
-
-		# # record data
-		# self.getSceneData()
+		# # do color Calibration
+		# self.colorCalibration()
 		# run = False
+
+		# record data
+		self.getSceneData()
+		run = False
 
 
 		while run:
