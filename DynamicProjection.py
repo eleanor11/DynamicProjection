@@ -422,13 +422,13 @@ class DynamicProjection(object):
 
 	def getSceneData(self):
 
-		idx = -10 + 10
+		idx = -10
 
-		while idx < 0 + 10:
+		while idx < 0:
 			idx += 1
 			self.getRawDataWithKinect(False)
 
-		while idx < 10 + 5:
+		while idx < 10:
 			print(idx)
 
 			ch = cv.waitKey(1)
@@ -482,8 +482,8 @@ class DynamicProjection(object):
 		# run = False
 
 		# record data
-		self.getSceneData()
-		run = False
+		# self.getSceneData()
+		# run = False
 
 
 		while run:
