@@ -4,7 +4,7 @@ from OpenGL.GL import *
 import numpy as np
 import PIL.Image as im
 
-PROJECTION_MODE = False
+PROJECTION_MODE = True
 
 # 0: default	1: test
 SHADER = 1

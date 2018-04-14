@@ -17,7 +17,7 @@ MODE = 0
 SAVE = False
 
 DATAPATH = '../DynamicProjectionData/'
-SUB = 'data/data_body/0/'
+SUB = 'data/data_body/14/'
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -155,6 +155,7 @@ class DynamicProjection(object):
 					np.save(DATAPATH + SUB + "rgbd.npy", rgbd)
 			else: 
 				rgbd = np.load(DATAPATH + SUB + "rgbd.npy")
+				rgbd = rgbd.reshape([424 * 512, 4])
 
 		else:
 
@@ -165,6 +166,7 @@ class DynamicProjection(object):
 					np.save(DATAPATH + SUB + "rgbd.npy", rgbd)
 			else: 
 				rgbd = np.load(DATAPATH + SUB + "rgbd.npy")
+				rgbd = rgbd.reshape([424 * 512, 4])
 
 
 		# trun raw depth into gray image
@@ -273,16 +275,16 @@ class DynamicProjection(object):
 		surface_normals = np.cross(p1 - p0, p2 - p1)
 
 		vertex_normals = np.zeros((424, 512, 3), np.float32)
-		# for i in range(num):
-		# 	vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
-		# 	vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
-		# 	vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
+		for i in range(num):
+			vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
+			vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
+			vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
 
 		normals = np.zeros((num * 3, 3), np.float32)
-		# for i in range(num):
-		# 	normals[i * 3] = vertex_normals[pos0[i, 0], pos0[i, 1]]
-		# 	normals[i * 3 + 1] = vertex_normals[pos1[i, 0], pos1[i, 1]]
-		# 	normals[i * 3 + 2] = vertex_normals[pos2[i, 0], pos2[i, 1]]
+		for i in range(num):
+			normals[i * 3] = vertex_normals[pos0[i, 0], pos0[i, 1]]
+			normals[i * 3 + 1] = vertex_normals[pos1[i, 0], pos1[i, 1]]
+			normals[i * 3 + 2] = vertex_normals[pos2[i, 0], pos2[i, 1]]
 
 
 		
@@ -477,11 +479,11 @@ class DynamicProjection(object):
 
 		run = True
 
-		# # do color Calibration
-		# self.colorCalibration()
-		# run = False
+		# do color Calibration
+		self.colorCalibration()
+		run = False
 
-		# record data
+		# # record data
 		# self.getSceneData()
 		# run = False
 
@@ -508,7 +510,7 @@ class DynamicProjection(object):
 				# color[100: 110, 230: 240] = np.array([255, 0, 0])
 
 				cv.imshow('depth', depth)
-				cv.imshow('color', color)
+				# cv.imshow('color', color)
 				# cv.imshow('cameraColor', cameraColor)
 				# cv.imshow('depth_part', depth_part)
 
@@ -519,6 +521,7 @@ class DynamicProjection(object):
 
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
+				# cv.imshow('corres', corres)
 
 
 				# # test color projection
@@ -527,13 +530,13 @@ class DynamicProjection(object):
 
 
 
-				# test image projection
-				image = cv.imread(DATAPATH + 'data/image.bmp')
-				image = image[..., ::-1]
+				# # test image projection
+				# image = cv.imread(DATAPATH + 'data/image.bmp')
+				# image = image[..., ::-1]
 
-				x0, y0, x1, y1 = 120, 205, 290, 335
-				w, h = image.shape[0], image.shape[1]
-				corres[x0: x1, y0: y1] = np.array([[image[int((i - x0) / (x1 - x0) * h), int((y1 - 1 - j) / (y1 - y0) * w)] for j in range(y0, y1)] for i in range(x0, x1)])
+				# x0, y0, x1, y1 = 120, 205, 290, 335
+				# w, h = image.shape[0], image.shape[1]
+				# corres[x0: x1, y0: y1] = np.array([[image[int((i - x0) / (x1 - x0) * h), int((y1 - 1 - j) / (y1 - y0) * w)] for j in range(y0, y1)] for i in range(x0, x1)])
 
 
 				# test position projection
