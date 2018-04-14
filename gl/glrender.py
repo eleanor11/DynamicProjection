@@ -7,7 +7,7 @@ import PIL.Image as im
 PROJECTION_MODE = True
 
 # 0: default	1: test
-SHADER = 1
+SHADER = 0
 
 
 def LoadProgram(shaderPathList):
@@ -64,7 +64,7 @@ class GLRenderer(object):
 		displayMode = GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH | GLUT_STENCIL
 		glutInitDisplayMode(displayMode)
 		if PROJECTION_MODE:
-			glutInitWindowPosition(1920, 0)
+			glutInitWindowPosition(0, 0)
 			glutEnterGameMode()
 		else:
 			glutInitWindowPosition(0, 0)

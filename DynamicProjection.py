@@ -345,7 +345,8 @@ class DynamicProjection(object):
 	def colorCalibration(self):
 
 		# idx = 0
-		idx = -10
+		# idx = -10
+		idx = 246
 
 		while idx < 0:
 			idx += 1
