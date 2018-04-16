@@ -346,7 +346,7 @@ class DynamicProjection(object):
 
 		# idx = 0
 		# idx = -10
-		idx = 246
+		idx = 502
 
 		while idx < 0:
 			idx += 1
@@ -410,7 +410,7 @@ class DynamicProjection(object):
 				else:
 					cameraColor = np.load(DATAPATH + SUB + 'cameraColor.npy')
 					
-				cv.imshow('color', cameraColor)
+				# cv.imshow('color', cameraColor)
 				cv.imwrite('{}capture_color/capture_{}_{}.png'.format(DATAPATH, c, idx % 256), cameraColor)
 				# cv.imwrite('color{}.bmp'.format(idx), cameraColor)
 
