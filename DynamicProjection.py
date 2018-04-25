@@ -475,6 +475,17 @@ class DynamicProjection(object):
 
 			idx = idx + 1
 
+	def filter(self, depth, selection = 0):
+		if selection == 0:
+			return depth
+		elif selection == 1:
+			kernel = np.ones((5, 5), np.float32) / 25
+			return cv.filter2D(depth, -1, kernel)
+		elif selection == 2:
+			return cv.medianBlur(depth, 5)
+		elif selection == 3:
+			return cv.GaussianBlur(depth, (5, 5), 0)
+
 
 	def run(self):
 
@@ -505,10 +516,24 @@ class DynamicProjection(object):
 				depth = rgbd[:, :, 3]
 				color = rgbd[:, :, 0: 3]
 				mask = depth_part >  0
+				not_mask = depth_part <= 0
 
-				# test position projection
-				# color[200: 210, 250: 260] = np.array([255, 0, 0])
-				# color[100: 110, 230: 240] = np.array([255, 0, 0])
+				kernel = cv.getStructuringElement(cv.MORPH_CROSS, (5, 5))
+				mask_erode = cv.erode(mask.astype(np.uint8), kernel).astype(np.bool)
+				mask_edge = mask ^ mask_erode
+				depth_erode = np.zeros((424, 512), np.uint8)
+				depth_erode[mask_erode] = depth_part[mask_erode]
+				depth_edge = np.zeros((424, 512), np.uint8)
+				depth_edge[mask_edge] = depth_part[mask_edge]
+
+				rawdepth_filter = copy.copy(rawdepth)
+				rawdepth_filter = self.filter(rawdepth, 3)
+				rawdepth_filter = rawdepth_filter.reshape([424, 512])
+				rawdepth_filter[not_mask] = 0
+				rawdepth_filter[mask_edge] = rawdepth.reshape([424, 512])[mask_edge]
+				depth_filter = self.depth2gray(rawdepth_filter, False)
+				rawdepth_filter = rawdepth_filter.reshape(rawdepth.shape)
+
 
 				cv.imshow('depth', depth)
 				# cv.imshow('color', color)
@@ -548,7 +573,7 @@ class DynamicProjection(object):
 					np.save(DATAPATH + 'data/corres.npy', corres)
 					np.save(DATAPATH + 'data/depth_part.npy', depth_part)
 
-				self.project(rawdepth, corres, mask)
+				self.project(rawdepth_filter, corres, mask)
 
 
 			
