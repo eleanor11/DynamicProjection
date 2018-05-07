@@ -64,11 +64,11 @@ class GLRenderer(object):
 		displayMode = GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH | GLUT_STENCIL
 		glutInitDisplayMode(displayMode)
 		glutInitWindowPosition(0, 0)
-		if PROJECTION_MODE:
-			glutEnterGameMode()
 		glutInitWindowSize(self.width, self.height)
 		self.window = glutCreateWindow(name)
-		# glutFullScreen()
+		if PROJECTION_MODE:
+			# glutEnterGameMode()
+			glutFullScreen()
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_DEPTH_TEST)
 		glDepthFunc(GL_LESS)

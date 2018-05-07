@@ -8,16 +8,19 @@ import gl.glm as glm
 import ctypes
 import copy
 import time
+from numpy.linalg import inv
+import os
 
 MODE = 0
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = False
+SAVE = True
 
 DATAPATH = '../DynamicProjectionData/'
-SUB = 'data/data_body/14/'
+# SUB = 'data/data_body/14/'
+SUB = ''
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -344,7 +347,7 @@ class DynamicProjection(object):
 
 		return flag, rawdepth, rawcolor, rawinfrared, cameraColor
 
-	def calculateRT(sub = '_ll/'):
+	def calculateRT(self, sub = '_ll/'):
 		path = '../DynamicProjectionData/capture_images'
 		path = path + sub + 'good/npy/'
 
@@ -377,7 +380,11 @@ class DynamicProjection(object):
 
 		return R_final, T_final
 
-	def calibrate_kinect_camera(R, T, base_p_irs, camera, infrared):
+	def calibrateKinectCamera(self, R, T, base_p_irs, camera, depth, infrared):
+
+		depth = np.flip(depth.reshape([424, 512]), 1)
+		depth = depth.reshape([424 * 512])
+
 		infrared = infrared.reshape((424, 512))
 		infrared = self.depth2gray(infrared)
 		infrared = np.flip(255 - infrared, 1)
@@ -550,15 +557,15 @@ class DynamicProjection(object):
 		run = True
 
 		# do color Calibration
-		self.colorCalibration()
-		run = False
+		# self.colorCalibration()
+		# run = False
 
 		# # record data
 		# self.getSceneData()
 		# run = False
 
 		# for calibration between camera and kinect
-		R, T = calculateRT()
+		R, T = self.calculateRT()
 		base_p_irs = np.array([np.array([i, j, 1.0]) for i in range(424) for j in range(512)], np.float32)
 
 		while run:
@@ -579,7 +586,7 @@ class DynamicProjection(object):
 				mask = depth_part >  0
 				not_mask = depth_part <= 0
 
-				cv.imshow('depth', depth)
+				# cv.imshow('depth', depth)
 				# cv.imshow('color', color)
 				# cv.imshow('cameraColor', cameraColor)
 				# cv.imshow('depth_part', depth_part)
@@ -617,7 +624,7 @@ class DynamicProjection(object):
 				# TODO: BRDF reconstruction
 
 				# calibration between kinect and camera
-				cali = calibrate_kinect_camera(R, T, base_p_irs, cameraColor, rawinfrared)
+				cali = self.calibrateKinectCamera(R, T, base_p_irs, cameraColor, rawdepth, rawinfrared)
 				cv.imshow('cali', cali)
 
 				# TODO: color compensation
@@ -643,7 +650,7 @@ class DynamicProjection(object):
 					np.save(DATAPATH + 'data/corres.npy', corres)
 					np.save(DATAPATH + 'data/depth_part.npy', depth_part)
 
-				self.project(rawdepth_filter, corres, mask)
+				# self.project(rawdepth_filter, corres, mask)
 
 
 			
