@@ -11,16 +11,16 @@ import time
 from numpy.linalg import inv
 import os
 
-MODE = 0
+# MODE = 2
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = True
+SAVE = False
 
 DATAPATH = '../DynamicProjectionData/'
 # SUB = 'data/data_body/14/'
-SUB = ''
+SUB = 'data/0507/'
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -365,7 +365,7 @@ class DynamicProjection(object):
 			])
 		T_plus = np.array([0, 0, 0])
 
-		if os.path.isfile('R_plus.npy') and os.path.isfile('T_plus.npy'):
+		if os.path.isfile(path + 'R_plus.npy') and os.path.isfile(path + 'T_plus.npy'):
 			R_plus = np.load(path + 'R_plus.npy')
 			T_plus = np.load(path + 'T_plus.npy')
 
@@ -592,9 +592,9 @@ class DynamicProjection(object):
 				# cv.imshow('depth_part', depth_part)
 
 				if SAVE:
-					cv.imwrite(DATAPATH + 'data/depth.png', depth)
-					cv.imwrite(DATAPATH + 'data/color.png', color)
-					cv.imwrite(DATAPATH + 'data/cameraColor.png', cameraColor)
+					cv.imwrite(DATAPATH + SUB + 'depth.png', depth)
+					cv.imwrite(DATAPATH + SUB + 'color.png', color)
+					cv.imwrite(DATAPATH + SUB + 'cameraColor.png', cameraColor)
 
 
 				# smooth rawdepth map
@@ -650,7 +650,7 @@ class DynamicProjection(object):
 					np.save(DATAPATH + 'data/corres.npy', corres)
 					np.save(DATAPATH + 'data/depth_part.npy', depth_part)
 
-				# self.project(rawdepth_filter, corres, mask)
+				self.project(rawdepth_filter, corres, mask)
 
 
 			
