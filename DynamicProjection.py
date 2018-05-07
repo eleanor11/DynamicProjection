@@ -24,7 +24,7 @@ class DynamicProjection(object):
 		print("Start initializing dp...")
 
 		# init kinect
-		self.kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Depth | PyKinectV2.FrameSourceTypes_Color)
+		self.kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Depth | PyKinectV2.FrameSourceTypes_Color | PyKinectV2.FrameSourceTypes_Infrared)
 
 		self.znear = 0.2
 		self.zfar = 3.0
@@ -309,9 +309,10 @@ class DynamicProjection(object):
 	def getRawData(self):
 		rawdepth = np.load(DATAPATH + SUB + 'rawdepth.npy')
 		rawcolor = np.load(DATAPATH + SUB + 'rawcolor.npy')
+		rawinfrared = np.load(DATAPATH + SUB + 'rawinfrared.npy')
 		cameraColor = np.load(DATAPATH + SUB + 'cameraColor.npy')
 
-		return True, rawdepth, rawcolor, cameraColor
+		return True, rawdepth, rawcolor, rawinfrared, cameraColor
 
 
 	def getRawDataWithKinect(self, save):
@@ -322,14 +323,16 @@ class DynamicProjection(object):
 		rawcolor = np.zeros((1080 * 1092 * 4))
 		cameraColor = np.zeros((1280 * 960 * 3))
 
-		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
+		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame() and self.kinect.has_new_infrared_frame():
 			
 			rawdepth = self.kinect.get_last_depth_frame()
 			rawcolor = self.kinect.get_last_color_frame()
+			rawinfrared = self.kinect.get_last_infrared_frame()
 
 			if save:
 				np.save(DATAPATH + SUB + 'rawdepth.npy', rawdepth)
 				np.save(DATAPATH + SUB + 'rawcolor.npy', rawcolor)
+				np.save(DATAPATH + SUB + 'rawinfrared.npy', rawinfrared)
 
 			flag = True
 
@@ -339,7 +342,63 @@ class DynamicProjection(object):
 			np.save(DATAPATH + SUB + 'cameraColor.npy', cameraColor)
 
 
-		return flag, rawdepth, rawcolor, cameraColor
+		return flag, rawdepth, rawcolor, rawinfrared, cameraColor
+
+	def calculateRT(sub = '_ll/'):
+		path = '../DynamicProjectionData/capture_images'
+		path = path + sub + 'good/npy/'
+
+		R_ir = np.load(path + 'R_ir.npy')
+		T_ir = np.load(path + 'T_ir.npy')
+		R_rgb = np.load(path + 'R_rgb.npy')
+		T_rgb = np.load(path + 'T_rgb.npy')
+		H_ir = np.load(path + 'H_ir.npy')
+		H_rgb = np.load(path + 'H_rgb.npy')
+
+		R_plus = np.array([
+			[1, 0, 0], 
+			[0, 1, 0], 
+			[0, 0, 1]		
+			])
+		T_plus = np.array([0, 0, 0])
+
+		if os.path.isfile('R_plus.npy') and os.path.isfile('T_plus.npy'):
+			R_plus = np.load(path + 'R_plus.npy')
+			T_plus = np.load(path + 'T_plus.npy')
+
+		R = np.matmul(R_rgb, inv(R_ir))
+		T = T_rgb - np.matmul(R, T_ir)
+
+		R_final = np.matmul(H_rgb, np.matmul(R, inv(H_ir)))
+		T_final = np.matmul(H_rgb, T)
+
+		R_final = np.matmul(R_final, R_plus)
+		T_final = T_final + T_plus
+
+		return R_final, T_final
+
+	def calibrate_kinect_camera(R, T, base_p_irs, camera, infrared):
+		infrared = infrared.reshape((424, 512))
+		infrared = self.depth2gray(infrared)
+		infrared = np.flip(255 - infrared, 1)
+
+		cali = np.zeros((424, 512, 3), np.uint8)
+		base_depth = np.zeros((424 * 512, 3), np.float32)
+		for i in range(3):
+			cali[:, :, i] = copy.copy(infrared)
+			base_depth[:, i] = depth
+
+		p_irs = np.transpose(base_p_irs * base_depth)
+		p_rgbs = np.transpose(np.matmul(R, p_irs)) + T
+		
+		x, y = (p_rgbs[:, 0] / p_rgbs[:, 2]).astype(int), (p_rgbs[:, 1] / p_rgbs[:, 2]).astype(int)
+		mask = np.logical_and(np.logical_and(x >= 0, x < camera.shape[0]), np.logical_and(y >= 0, y < camera.shape[1]))
+		x, y = x[mask], y[mask]
+			
+		mask = mask.reshape([424, 512])
+		cali[mask] = camera[x, y]
+
+		return cali
 
 
 	def colorCalibration(self):
@@ -422,7 +481,6 @@ class DynamicProjection(object):
 
 			idx = idx + 1
 
-
 	def getSceneData(self):
 
 		idx = -10
@@ -499,6 +557,9 @@ class DynamicProjection(object):
 		# self.getSceneData()
 		# run = False
 
+		# for calibration between camera and kinect
+		R, T = calculateRT()
+		base_p_irs = np.array([np.array([i, j, 1.0]) for i in range(424) for j in range(512)], np.float32)
 
 		while run:
 			ch = cv.waitKey(1)
@@ -506,9 +567,9 @@ class DynamicProjection(object):
 				break
 
 			if MODE < 2:
-				flag, rawdepth, rawcolor, cameraColor = self.getRawDataWithKinect(SAVE)  
+				flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(SAVE)  
 			else:
-				flag, rawdepth, rawcolor, cameraColor = self.getRawData()
+				flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawData()
 
 			if flag:
 
@@ -517,23 +578,6 @@ class DynamicProjection(object):
 				color = rgbd[:, :, 0: 3]
 				mask = depth_part >  0
 				not_mask = depth_part <= 0
-
-				kernel = cv.getStructuringElement(cv.MORPH_CROSS, (5, 5))
-				mask_erode = cv.erode(mask.astype(np.uint8), kernel).astype(np.bool)
-				mask_edge = mask ^ mask_erode
-				depth_erode = np.zeros((424, 512), np.uint8)
-				depth_erode[mask_erode] = depth_part[mask_erode]
-				depth_edge = np.zeros((424, 512), np.uint8)
-				depth_edge[mask_edge] = depth_part[mask_edge]
-
-				rawdepth_filter = copy.copy(rawdepth)
-				rawdepth_filter = self.filter(rawdepth, 3)
-				rawdepth_filter = rawdepth_filter.reshape([424, 512])
-				rawdepth_filter[not_mask] = 0
-				rawdepth_filter[mask_edge] = rawdepth.reshape([424, 512])[mask_edge]
-				depth_filter = self.depth2gray(rawdepth_filter, False)
-				rawdepth_filter = rawdepth_filter.reshape(rawdepth.shape)
-
 
 				cv.imshow('depth', depth)
 				# cv.imshow('color', color)
@@ -545,16 +589,43 @@ class DynamicProjection(object):
 					cv.imwrite(DATAPATH + 'data/color.png', color)
 					cv.imwrite(DATAPATH + 'data/cameraColor.png', cameraColor)
 
+
+				# smooth rawdepth map
+				kernel = cv.getStructuringElement(cv.MORPH_CROSS, (5, 5))
+				mask_erode = cv.erode(mask.astype(np.uint8), kernel).astype(np.bool)
+				mask_edge = mask ^ mask_erode
+				depth_erode = np.zeros((424, 512), np.uint8)
+				depth_erode[mask_erode] = depth_part[mask_erode]
+
+				rawdepth_filter = copy.copy(rawdepth)
+				rawdepth_filter = self.filter(rawdepth, 3)
+				rawdepth_filter = rawdepth_filter.reshape([424, 512])
+				rawdepth_filter[not_mask] = 0
+				rawdepth_filter[mask_edge] = rawdepth.reshape([424, 512])[mask_edge]
+				depth_filter = self.depth2gray(rawdepth_filter, False)
+				rawdepth_filter = rawdepth_filter.reshape(rawdepth.shape)
+
+
+				# render content
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
 				# cv.imshow('corres', corres)
 
 
+				# TODO: segmentation
+
+				# TODO: BRDF reconstruction
+
+				# calibration between kinect and camera
+				cali = calibrate_kinect_camera(R, T, base_p_irs, cameraColor, rawinfrared)
+				cv.imshow('cali', cali)
+
+				# TODO: color compensation
+
+
 				# # test color projection
 				# corres = np.array([[[(i + j + k * 80) % 256 for k in range(3)] for j in range(512)] for i in range(424)])
 				# corres[np.logical_not(mask)] = np.array([0, 0, 0])
-
-
 
 				# # test image projection
 				# image = cv.imread(DATAPATH + 'data/image.bmp')
@@ -563,7 +634,6 @@ class DynamicProjection(object):
 				# x0, y0, x1, y1 = 120, 205, 290, 335
 				# w, h = image.shape[0], image.shape[1]
 				# corres[x0: x1, y0: y1] = np.array([[image[int((i - x0) / (x1 - x0) * h), int((y1 - 1 - j) / (y1 - y0) * w)] for j in range(y0, y1)] for i in range(x0, x1)])
-
 
 				# test position projection
 				# corres[200: 210, 250: 260] = np.array([255, 0, 0])
