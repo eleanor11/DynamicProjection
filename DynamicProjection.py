@@ -11,16 +11,16 @@ import time
 from numpy.linalg import inv
 import os
 
-# MODE = 2
+MODE = 0
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
-SAVE = False
+SAVE = True
 
 DATAPATH = '../DynamicProjectionData/'
 # SUB = 'data/data_body/14/'
-SUB = 'data/0507/'
+SUB = 'data/0507_1/'
 
 class DynamicProjection(object):
 	def __init__(self):
