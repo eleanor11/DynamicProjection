@@ -1,16 +1,17 @@
 import tensorflow as tf 
 from tensorflow.examples.tutorials.mnist import input_data
-import numpy as np 
 
 
 
 class DPNet:
-	def __init__(self, size, height, width):
+	def __init__(self, size, height, width, normal_ori):
 		self.mode = 'Training'
 		self.size = size
 		self.height = height
 		self.width = width
+		self.normal_ori = normal_ori
 		self.oc = 16
+		self.learning_rate = 1e-2
 
 
 	def weight_variable(self, shape):
@@ -63,11 +64,15 @@ class DPNet:
 		h_feature_bn = self.batch_norm(h_feature)
 		h_feature_relu = self.relu(h_feature_bn)
 
+		# 0: train, 1: self.normal
+		if self.normal_ori == 1:
+			return h_feature_relu, self.normal, 0
+
 		W_conv4 = self.weight_variable([3, 3, self.oc, 3])
 		h_conv4 = self.conv2d(h_conv3_relu, W_conv4)
-		h_l2_norm = self.l2_norm(h_conv4, 2)
+		h_l2_norm = self.l2_norm(h_conv4, 3)
 
-		return h_feature_relu, h_l2_norm
+		return h_feature_relu, h_l2_norm, tf.reduce_sum(self.mask * (self.normal - h_l2_norm) ** 2)
 
 	def IRNet(self, x, feature):
 
@@ -110,13 +115,14 @@ class DPNet:
 		print('net')
 
 
-		self.depth = tf.placeholder(tf.float32, [self.size, self.height, self.width, 1])
-		self.mask = tf.placeholder(tf.float32, [self.size, self.height, self.width, 1])
-		self.color = tf.placeholder(tf.float32, [self.size, self.height, self.width, 3])
+		self.normal = tf.placeholder(tf.float32, [self.size, self.height, self.width, 3], name = 'normal')
+		self.color = tf.placeholder(tf.float32, [self.size, self.height, self.width, 3], name = 'color')
+		self.mask = tf.placeholder(tf.float32, [self.size, self.height, self.width, 1], name = 'mask')
+		self.lamda = tf.placeholder(tf.float32, name = 'lamda')
 		# self.color_concate = tf.placeholder(tf.float32, [1, self.height, self.width, self.size * 3])
 		
-		lightdir = tf.constant([0.0, 0.0, -1.0])
-		viewdir = tf.constant([0.0, 0.0, -1.0])
+		lightdir = tf.constant([0.0, 0.0, 1.0])
+		viewdir = tf.constant([0.0, 0.0, 1.0])
 
 		mat_size = self.size * self.height * self.width
 		mat_shape = [self.size, self.height, self.width, 3, 1]
@@ -124,8 +130,8 @@ class DPNet:
 		viewdir_mat = tf.reshape(tf.tile(viewdir, [mat_size]), mat_shape)
 
 		# PS Net
-		# normal: H * W * 3
-		feature, normal = self.PSNet(self.color)
+		# normal: M * H * W * 3
+		feature, normal, lp = self.PSNet(self.color)
 		
 		normal_mat = tf.expand_dims(normal, 3)
 		nxl = tf.reshape(tf.matmul(normal_mat, lightdir_mat), [self.size, self.height, self.width, 1])
@@ -139,76 +145,27 @@ class DPNet:
 
 		I_ = BRDF * self.relu(nxl)
 
-		# TODO: loss
-		loss_res = tf.reduce_sum(self.mask * (self.color - I_)) / (self.size * tf.reduce_sum(self.mask) * 3)
-		# loss_prior = 
-		train_step = tf.train.AdamOptimizer(1e-4).minimize(loss_res)
+		lr = tf.reduce_sum(self.mask * tf.abs(self.color - I_))
+		mask_sum = tf.reduce_sum(self.mask) * 3
 
-		# TODO: prediction
-		prediction = tf.equal(self.color, I_)
-		accuracy = tf.reduce_mean(tf.cast(prediction, tf.float32))
+		loss_res = lr / mask_sum
+		loss_prior = lp / mask_sum
+		loss = loss_res + self.lamda * loss_prior
+		train_step = tf.train.AdamOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
 
+		accuracy = tf.reduce_sum(tf.cast(tf.equal(self.color, I_), tf.float32) * self.mask) / mask_sum
+		delta = 3.0 / 256.0
+		accuracy_3 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.color - I_), delta), tf.float32) * self.mask) / mask_sum
 
-		return train_step, accuracy
+		Im_ = I_ * self.mask
 
+		# rename
+		accuracy = tf.identity(accuracy, name = 'accuracy')
+		accuracy_3 = tf.identity(accuracy_3, name = 'accuracy_3')
+		loss = tf.identity(loss, name = 'loss')
+		BRDF = tf.identity(BRDF, name = 'BRDF')
+		Im_ = tf.identity(Im_, name = 'Ipre')
 
-def readData():
-
-	# depth: M * W * H * 1, color: M * W * H * 3
-
-	print('load data')
-
-	datapath = '../DynamicProjectionData/capture_data_' + '2/'
-
-	number = 50
-
-	depth = np.array([np.load(datapath + 'depth{}.npy'.format(0))])
-	color = np.array([np.load(datapath + 'color{}.npy'.format(0))])
-	mask = np.array([np.load(datapath + 'mask{}.npy'.format(0))], np.bool)
-	# colori = np.load(datapath + 'color{}.npy'.format(0))
-	# color = np.array([colori])
-	# color_concate = np.array(colori)
-
-	for i in range(1, number):
-		depth = np.append(depth, [np.load(datapath + 'depth{}.npy'.format(i))], axis = 0)
-		color = np.append(color, [np.load(datapath + 'color{}.npy'.format(i))], axis = 0)
-		mask = np.append(mask, [np.load(datapath + 'mask{}.npy'.format(i))], axis = 0)
-		# colori = np.load(datapath + 'color{}.npy'.format(i))
-		# color = np.append(color, [colori])
-		# color_concate = np.append(color_concate, colori, axis = 2)
-
-	depth = np.expand_dims(depth, axis = 3)
-	mask = np.expand_dims(mask, axis = 3)
-
-	return depth, color, mask
+		return train_step, accuracy, accuracy_3, loss, BRDF, Im_, loss_res, loss_prior
 
 
-def train():
-
-	print('train')
-	
-	depth, color, mask = readData()
-	[size, height, width] = depth.shape[0: 3]
-
-	batch_size = 1
-
-	model = DPNet(batch_size, height, width)
-
-	with tf.Session() as sess:
-
-		train_step, accuracy = model.net()
-
-		sess.run(tf.global_variables_initializer())
-
-		for i in range(20000):
-			idx = i % 40
-
-			if i % 100 == 0:
-				train_accuracy = sess.run(accuracy, feed_dict = {model.depth: depth[idx: idx + batch_size], model.color: color[idx: idx + batch_size], model.mask: mask[idx: idx + batch_size]})
-				print("step {}, training accuracy {}".format(i, train_accuracy))
-			sess.run(train_step, feed_dict = {model.depth: depth[idx: idx + batch_size], model.color: color[idx: idx + batch_size], model.mask: mask[idx: idx + batch_size]})
-
-
-
-if __name__ == '__main__':
-	train()

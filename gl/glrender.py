@@ -4,7 +4,7 @@ from OpenGL.GL import *
 import numpy as np
 import PIL.Image as im
 
-PROJECTION_MODE = True
+PROJECTION_MODE = False
 
 # 0: default	1: test
 SHADER = 0
@@ -63,11 +63,12 @@ class GLRenderer(object):
 		glutInit()
 		displayMode = GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH | GLUT_STENCIL
 		glutInitDisplayMode(displayMode)
-		if PROJECTION_MODE:
-			glutEnterGameMode()
 		glutInitWindowPosition(0, 0)
 		glutInitWindowSize(self.width, self.height)
-		self.window = glutCreateWindow(name)
+		if PROJECTION_MODE:
+			glutEnterGameMode()
+		else:
+			self.window = glutCreateWindow(name)
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_DEPTH_TEST)
 		glDepthFunc(GL_LESS)
