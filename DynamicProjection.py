@@ -331,6 +331,7 @@ class DynamicProjection(object):
 
 		rawdepth = np.zeros((424 * 512, 1))
 		rawcolor = np.zeros((1080 * 1092 * 4))
+		rawinfrared = np.zeros((424 * 512, 1))
 		cameraColor = np.zeros((1280 * 960 * 3))
 
 		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame() and self.kinect.has_new_infrared_frame():

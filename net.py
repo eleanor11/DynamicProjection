@@ -4,12 +4,12 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 
 class DPNet:
-	def __init__(self, size, height, width, normal_ori):
-		self.mode = 'Training'
+	def __init__(self, size, height, width, normal_ori, lightdir = [0.0, 0.0, 1.0]):
 		self.size = size
 		self.height = height
 		self.width = width
 		self.normal_ori = normal_ori
+		self.lightdir = tf.constant(lightdir)
 		self.oc = 16
 		self.learning_rate = 1e-2
 
@@ -35,12 +35,12 @@ class DPNet:
 		return tf.nn.l2_normalize(x, axis = dim)
 
 	def batch_norm(self, x):
-		[x_mean, x_varia] = tf.nn.moments(x, axes = 0)
+		[x_mean, x_varia] = tf.nn.moments(x, axes = [0, 1, 2])
 		offset = 0
 		scale = 0.1
 		vari_epsl = 0.0001
 		## calculate the batch normalization
-		return tf.nn.batch_normalization(x, x_mean, x_varia, offset,scale,vari_epsl)
+		return tf.nn.batch_normalization(x, x_mean, x_varia, offset, scale, vari_epsl)
 
 	def PSNet(self, x):
 
@@ -73,6 +73,7 @@ class DPNet:
 		h_l2_norm = self.l2_norm(h_conv4, 3)
 
 		return h_feature_relu, h_l2_norm, tf.reduce_sum(self.mask * (self.normal - h_l2_norm) ** 2)
+
 
 	def IRNet(self, x, feature):
 
@@ -110,10 +111,10 @@ class DPNet:
 
 		return h_conv6
 
-	def net(self):
+
+	def net(self, mode = 'training'):
 
 		print('net')
-
 
 		self.normal = tf.placeholder(tf.float32, [self.size, self.height, self.width, 3], name = 'normal')
 		self.color = tf.placeholder(tf.float32, [self.size, self.height, self.width, 3], name = 'color')
@@ -121,12 +122,11 @@ class DPNet:
 		self.lamda = tf.placeholder(tf.float32, name = 'lamda')
 		# self.color_concate = tf.placeholder(tf.float32, [1, self.height, self.width, self.size * 3])
 		
-		lightdir = tf.constant([0.0, 0.0, 1.0])
 		viewdir = tf.constant([0.0, 0.0, 1.0])
 
 		mat_size = self.size * self.height * self.width
 		mat_shape = [self.size, self.height, self.width, 3, 1]
-		lightdir_mat = tf.reshape(tf.tile(lightdir, [mat_size]), mat_shape)
+		lightdir_mat = tf.reshape(tf.tile(self.lightdir, [mat_size]), mat_shape)
 		viewdir_mat = tf.reshape(tf.tile(viewdir, [mat_size]), mat_shape)
 
 		# PS Net
@@ -135,7 +135,7 @@ class DPNet:
 		
 		normal_mat = tf.expand_dims(normal, 3)
 		nxl = tf.reshape(tf.matmul(normal_mat, lightdir_mat), [self.size, self.height, self.width, 1])
-		mat_t = tf.expand_dims(nxl * normal * 2 - lightdir, 3)
+		mat_t = tf.expand_dims(nxl * normal * 2 - self.lightdir, 3)
 		specular = tf.reshape(tf.matmul(mat_t, viewdir_mat), [self.size, self.height, self.width, 1])
 
 		# IR Net
@@ -153,10 +153,12 @@ class DPNet:
 		loss = loss_res + self.lamda * loss_prior
 		train_step = tf.train.AdamOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
 
+		dif = tf.cast(tf.equal(self.color, I_), tf.float32) * self.mask
 		accuracy = tf.reduce_sum(tf.cast(tf.equal(self.color, I_), tf.float32) * self.mask) / mask_sum
 		delta = 3.0 / 256.0
 		accuracy_3 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.color - I_), delta), tf.float32) * self.mask) / mask_sum
 
+		normalm = normal * self.mask
 		Im_ = I_ * self.mask
 
 		# rename
@@ -166,6 +168,9 @@ class DPNet:
 		BRDF = tf.identity(BRDF, name = 'BRDF')
 		Im_ = tf.identity(Im_, name = 'Ipre')
 
-		return train_step, accuracy, accuracy_3, loss, BRDF, Im_, loss_res, loss_prior
+		if mode == 'training':
+			return train_step, accuracy, accuracy_3, loss, BRDF, Im_, loss_res, loss_prior
+		else:
+			return accuracy, accuracy_3, loss, normalm, BRDF, Im_, loss_res, loss_prior, dif
 
 
