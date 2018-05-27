@@ -6,8 +6,8 @@ import PIL.Image as im
 
 PROJECTION_MODE = False
 
-# 0: default	1: test
-SHADER = 0
+# 0: default	1: test 	2: 
+SHADER = 1
 
 
 def LoadProgram(shaderPathList):
@@ -78,6 +78,8 @@ class GLRenderer(object):
 		self.vertexBuf = glGenBuffers(1)
 		self.colorBuf = glGenBuffers(1)
 		self.normalBuf = glGenBuffers(1)
+		if SHADER == 2:
+			self.brdfBuf = glGenBuffers(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
 		self.toTexture = toTexture
@@ -110,6 +112,8 @@ class GLRenderer(object):
 			shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
 		elif SHADER == 1:
 			shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
+		elif SHADER == 2:
+			shaderPathList = [os.path.join('gl', sh) for sh in ['test_brdf.vs', 'test_brdf.fs']]
 		self.program = LoadProgram(shaderPathList)
 		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
 
@@ -118,6 +122,8 @@ class GLRenderer(object):
 			self.ld = glGetUniformLocation(self.program, 'ld')
 			self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
 			self.lightColor = glGetUniformLocation(self.program, 'lightColor')
+		elif SHADER == 2:
+			self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
 
 
 		# glEnableVertexAttribArray(2)
@@ -128,7 +134,7 @@ class GLRenderer(object):
 
 
 
-	def draw(self, vertices, colors, normals, mvp):
+	def draw(self, vertices, colors, normals, brdfs, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program)
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
@@ -136,8 +142,10 @@ class GLRenderer(object):
 		if SHADER == 1:
 			glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
 			glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			glUniform3fv(self.lightPosition, 1, np.array((1.0, 1.0, 1.0), np.float32))
+			glUniform3fv(self.lightPosition, 1, np.array((0.0, 0.0, 1.0), np.float32))
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
+		elif SHADER == 2:
+			glUniform3fv(self.lightPosition, 1, np.array((0.0, 0.0, 1.0), np.float32))
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)
@@ -175,6 +183,19 @@ class GLRenderer(object):
 			None
 		)
 
+		if SHADER == 2:
+			glEnableVertexAttribArray(3)
+			glBindBuffer(GL_ARRAY_BUFFER, self.brdfBuf)
+			glBufferData(GL_ARRAY_BUFFER, brdfs, GL_STATIC_DRAW)
+			glVertexAttribPointer(
+				3, 
+				brdfs.shape[1],
+				GL_FLOAT, 
+				GL_FALSE, 
+				0, 
+				None
+			)
+
 
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 		# glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
@@ -183,6 +204,8 @@ class GLRenderer(object):
 		glDisableVertexAttribArray(0)
 		glDisableVertexAttribArray(1)
 		glDisableVertexAttribArray(2)
+		if SHADER == 2:
+			glDisableVertexAttribArray(3)
 		glUseProgram(0)
 		glutSwapBuffers()
 

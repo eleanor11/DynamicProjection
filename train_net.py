@@ -24,7 +24,7 @@ def prepareLog(start_iter, normal_ori_i, datetime = ''):
 		path = PATH + 'train_log/' + datetime
 		outdatapath = path + '/data'
 		ckptpath = path + '/ckpt'
-		name = 'log_{}_{}.log'.format(datetime, start_iter)
+		name = 'log_{}_{}.log'.format(datetime[0: len(datetime) - 2], start_iter)
 
 		 
 	logging.basicConfig(filename = path + '/' + name, level = logging.INFO)
@@ -32,7 +32,7 @@ def prepareLog(start_iter, normal_ori_i, datetime = ''):
 	return outdatapath, ckptpath
 
 
-def readData(indatapath, outdatapath, data_size, batch_size):
+def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False):
 
 	print('load data')
 
@@ -48,6 +48,9 @@ def readData(indatapath, outdatapath, data_size, batch_size):
 	mask = np.expand_dims(mask, axis = 3)
 	color = color.astype(np.float32) / 255.0
 
+	if remove_back:
+		normal = normal * mask
+		color = color * mask
 
 	train_size = int(data_size * 0.8)
 	test_size = data_size - train_size
@@ -86,14 +89,16 @@ def train():
 	data_size = 540
 	batch_size = 5
 	
-	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(indatapath, outdatapath, data_size, batch_size)
+	remove_back = True
+	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
+		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
 
 	model = DPNet(batch_size, height, width, normal_ori_i)
 
 	logging.info('datapath: ' + indatapath)
 	logging.info('normal: ' + normal_ori[normal_ori_i])
-	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(size, train_size, test_size))
+	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
 	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, 1))
 
 	end = size - batch_size
@@ -114,6 +119,7 @@ def train():
 				print(i)
 			idx = i % end
 			if i < 2000:
+			# if i < 20000:
 				lamda = 1
 			else:
 				lamda = 0
@@ -128,12 +134,14 @@ def train():
 						model.color: train_color[idx: idx + batch_size], 
 						model.mask: train_mask[idx: idx + batch_size], 
 						model.lamda: lamda})
-				logging.info("{}: train step {}, \ttraining accuracy {}, \t{}, \tloss {}".format(
+				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
 					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
 					i, 
 					train_accuracy, 
 					train_accuracy_3, 
-					train_loss))
+					train_loss, 
+					train_lr, 
+					train_lp))
 				if i % 300 == 0 or i == 19999:
 					train_ii = (train_ii * 255).astype(np.uint8)
 					train_ii[train_ii > 255] = 255
@@ -165,15 +173,19 @@ def train():
 					test_idx += batch_size
 
 				[test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp] = result_sum / result_cnt
-				logging.info("{}: test step {}, \ttesting accuracy {}, \t{}, \tloss {}".format(
+				logging.info("{}: test step : {}, \ttesting accuracy : {:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
 					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
 					i, 
 					test_accuracy, 
 					test_accuracy_3, 
-					test_loss))
+					test_loss, 
+					test_lr, 
+					test_lp))
 
-				print("step {}, training accuracy {}, {}, loss {}".format(i, train_accuracy, train_accuracy_3, train_loss))
-				print("step {}, testing accuracy {}, {}, loss {}".format(i, test_accuracy, test_accuracy_3, test_loss))
+				print("step {}, training accuracy {}, {}, loss {}, {}, {}".format(
+					i, train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp))
+				print("step {}, testing accuracy {}, {}, loss {}, {}, {}".format(
+					i, test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp))
 
 			sess.run(train_step, feed_dict = {
 

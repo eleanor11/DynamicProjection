@@ -234,7 +234,7 @@ class DynamicProjection(object):
 			self.colorback_origin = np.load(DATAPATH + SUBIN + 'colorback_origin.npy')
 
 
-	def project(self, rawdepth, corres, mask):
+	def project(self, rawdepth, corres, mask, normal_ori_i, pre_normal, pre_BRDF):
 		proj = np.zeros([424, 512, 3], np.float32)
 
 		rawdepth = rawdepth.reshape([424, 512])[mask]
@@ -279,30 +279,42 @@ class DynamicProjection(object):
 		pos1 = np.concatenate([position[cul_umask], position[cdr_dmask]], 0)
 		pos2 = np.concatenate([position[cul_lmask], position[cdr_rmask]], 0)
 
-		# surface normal
-		surface_normals = np.zeros([num, 3], np.float32)
-		surface_normals = np.cross(p1 - p0, p2 - p1)
+		if normal_ori_i == 1:
+			# calculate surface normal
+			surface_normals = np.zeros([num, 3], np.float32)
+			surface_normals = np.cross(p1 - p0, p2 - p1)
 
-		vertex_normals = np.zeros((424, 512, 3), np.float32)
-		for i in range(num):
-			vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
-			vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
-			vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
-
+			vertex_normals = np.zeros((424, 512, 3), np.float32)
+			for i in range(num):
+				vertex_normals[pos0[i, 0], pos0[i, 1], 0: 3] += surface_normals[i]
+				vertex_normals[pos1[i, 0], pos1[i, 1], 0: 3] += surface_normals[i]
+				vertex_normals[pos2[i, 0], pos2[i, 1], 0: 3] += surface_normals[i]
+		else:
+			vertex_normals = pre_normal
+		n0 = np.concatenate([vertex_normals[cul_cmask], vertex_normals[cdr_cmask]], 0)
+		n2 = np.concatenate([vertex_normals[cul_umask], vertex_normals[cdr_dmask]], 0)
+		n1 = np.concatenate([vertex_normals[cul_lmask], vertex_normals[cdr_rmask]], 0)
 		normals = np.zeros((num * 3, 3), np.float32)
-		for i in range(num):
-			normals[i * 3] = vertex_normals[pos0[i, 0], pos0[i, 1]]
-			normals[i * 3 + 1] = vertex_normals[pos1[i, 0], pos1[i, 1]]
-			normals[i * 3 + 2] = vertex_normals[pos2[i, 0], pos2[i, 1]]
+		normals[0::3, :], normals[1::3, :], normals[2::3, :] = n0, n1, n2
 
 
-		corres[:, 0], corres[:, 2] = corres[:, 2], corres[:, 0]
+		tmp = copy.copy(pre_BRDF[:, :, 2])
+		pre_BRDF[:, :, 2] = pre_BRDF[:, :, 0]
+		pre_BRDF[:, :, 0] = tmp
+		b0 = np.concatenate([pre_BRDF[cul_cmask], pre_BRDF[cdr_cmask]], 0)
+		b2 = np.concatenate([pre_BRDF[cul_umask], pre_BRDF[cdr_dmask]], 0)
+		b1 = np.concatenate([pre_BRDF[cul_lmask], pre_BRDF[cdr_rmask]], 0)
+		brdfs = np.zeros((num * 3, 3), np.float32)
+		brdfs[0::3, :], brdfs[1::3, :], brdfs[2::3, :] = b0, b1, b2
 
+
+		tmp = copy.copy(corres[:, :, 2])
+		corres[:, :, 2] = corres[:, :, 0]
+		corres[:, :, 0] = tmp
 		c0 = np.concatenate([corres[cul_cmask], corres[cdr_cmask]], 0)
 		c2 = np.concatenate([corres[cul_umask], corres[cdr_dmask]], 0)
 		c1 = np.concatenate([corres[cul_lmask], corres[cdr_rmask]], 0)
 		c0, c1, c2 = c0 / 255, c1 / 255, c2 / 255
-
 		colors = np.zeros([num * 3, 3], np.float32)
 		colors[0::3, :], colors[1::3, :], colors[2::3, :] = c0, c1, c2
 
@@ -313,7 +325,7 @@ class DynamicProjection(object):
 		# vertex_normals = ((vertex_normals + 1) / 2 * 255).astype(np.uint8)
 		# cv.imshow('norm', vertex_normals)
 
-		self.render.draw(vertices, colors, normals, self.mvp.T)
+		self.render.draw(vertices, colors, normals, brdfs, self.mvp.T)
 
 
 	def getRawData(self):
@@ -561,6 +573,18 @@ class DynamicProjection(object):
 		elif selection == 3:
 			return cv.GaussianBlur(depth, (5, 5), 0)
 
+	def initNet(net_path, sess):
+		normal_ori = int(path[len(path) - 1])
+		lightdir = [0.0, 0.0, 1.0]
+		batch_size, height, width = 1, 424, 512
+		model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
+		accuracy_, accuracy_3_, loss_, normal_, BRDF_, I_, lr_, lp_ = model.net('predicting')
+		ckptpath = DATAPATH + 'train_log/' + path + '/ckpt'
+		tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
+		if normal_ori_i == 0:
+			return model, normal_ori_i, [normal_, BRDF_, I_]
+		else:
+			return model, normal_ori_i, [BRDF_, I_]
 
 	def run(self):
 
@@ -578,6 +602,10 @@ class DynamicProjection(object):
 		R, T = self.calculateRT()
 		base_p_irs = np.array([np.array([i, j, 1.0]) for i in range(424) for j in range(512)], np.float32)
 
+		# init net
+		# sess = tf.Session()
+		# model, normal_ori_i, content = initNet('20180526_231552_1', sess)
+		
 		self.time = time.time()
 		print('start...')
 		while run:
@@ -631,21 +659,53 @@ class DynamicProjection(object):
 				rawdepth_filter = rawdepth_filter.reshape(rawdepth.shape)
 
 
-				# render content
-				corres = np.zeros([424, 512, 3], np.uint8)
-				corres[mask] = np.array([255, 255, 255])
-				# cv.imshow('corres', corres)
-
-
 				# TODO: segmentation
 
+				normal_ori_i = 1
+				pre_BRDF = np.ones([424, 512, 3], np.float32)
+				pre_normal = None
+
 				# TODO: BRDF reconstruction
+				# if normal_ori_i == 0:
+				# 	pre_normal, pre_BRDF, pre_img = sess.run(
+				# 		content, 
+				# 		feed_dict = {
+				# 			model.normal: ???
+				# 			model.color: ???
+				# 			model.mask: ???
+				# 			model.lamda: ???
+				# 		})
+				# else:
+				# 	pre_normal == None
+				# 	pre_BRDF, pre_img = sess.run(
+				# 		content, 
+				# 		feed_dict = {
+				# 			model.normal: ???
+				# 			model.color: ???
+				# 			model.mask: ???
+				# 			model.lamda: ???
+				# 		})
+				# rawdepth_filter = np.load(DATAPATH + 'capture_data_handled_0527/rawdepth_filter0.npy')
+				# mask = np.load(DATAPATH + 'capture_data_handled_0527/mask0.npy')
+
+				# pre_normal = np.load(DATAPATH + 'test_log/20180527_141112_0/data/prenormal0.npy')
+				# # pre_normal = np.load(DATAPATH + 'capture_data_handled_0527/normal0.npy')
+				# pre_BRDF = np.load(DATAPATH + 'test_log/20180527_141112_0/data/preBRDF0.npy')
+				# pre_img = np.load(DATAPATH + 'test_log/20180527_141112_0/data/preimg0.npy')
+
 
 				# calibration between kinect and camera
 				cali = self.calibrateKinectCamera(R, T, base_p_irs, cameraColor, rawdepth, rawinfrared)
 				# cv.imshow('cali', cali)
 
 				# TODO: color compensation
+
+
+				# render content
+				corres = np.zeros([424, 512, 3], np.uint8)
+				corres[mask] = np.array([255, 255, 255])
+				# corres[mask] = pre_img[mask]
+				# cv.imshow('corres', corres)
 
 
 				# # test color projection
@@ -668,6 +728,8 @@ class DynamicProjection(object):
 					np.save(DATAPATH + SUB + 'corres.npy', corres)
 					np.save(DATAPATH + SUB + 'depth_part.npy', depth_part)
 
+
+				# save proj data with projection on body
 				if SAVEALL and time.time() - self.time > 5:
 					print('record...')
 					if not os.path.isdir(DATAPATH + SUBOUT):
@@ -694,7 +756,7 @@ class DynamicProjection(object):
 					self.index += 1
 					print(self.index)
 
-				self.project(rawdepth_filter, corres, mask)
+				self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_BRDF)
 
 
 			
