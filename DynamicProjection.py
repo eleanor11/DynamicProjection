@@ -298,9 +298,7 @@ class DynamicProjection(object):
 		normals[0::3, :], normals[1::3, :], normals[2::3, :] = n0, n1, n2
 
 
-		tmp = copy.copy(pre_BRDF[:, :, 2])
-		pre_BRDF[:, :, 2] = pre_BRDF[:, :, 0]
-		pre_BRDF[:, :, 0] = tmp
+		tmp = tmp[..., ::-1]
 		b0 = np.concatenate([pre_BRDF[cul_cmask], pre_BRDF[cdr_cmask]], 0)
 		b2 = np.concatenate([pre_BRDF[cul_umask], pre_BRDF[cdr_dmask]], 0)
 		b1 = np.concatenate([pre_BRDF[cul_lmask], pre_BRDF[cdr_rmask]], 0)
@@ -308,9 +306,7 @@ class DynamicProjection(object):
 		brdfs[0::3, :], brdfs[1::3, :], brdfs[2::3, :] = b0, b1, b2
 
 
-		tmp = copy.copy(corres[:, :, 2])
-		corres[:, :, 2] = corres[:, :, 0]
-		corres[:, :, 0] = tmp
+		corres = corres[..., ::-1]
 		c0 = np.concatenate([corres[cul_cmask], corres[cdr_cmask]], 0)
 		c2 = np.concatenate([corres[cul_umask], corres[cdr_dmask]], 0)
 		c1 = np.concatenate([corres[cul_lmask], corres[cdr_rmask]], 0)
@@ -578,7 +574,7 @@ class DynamicProjection(object):
 		lightdir = [0.0, 0.0, 1.0]
 		batch_size, height, width = 1, 424, 512
 		model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
-		accuracy_, accuracy_3_, loss_, normal_, BRDF_, I_, lr_, lp_ = model.net('predicting')
+		normal_, BRDF_, I_ = model.net('predicting')
 		ckptpath = DATAPATH + 'train_log/' + path + '/ckpt'
 		tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
 		if normal_ori_i == 0:

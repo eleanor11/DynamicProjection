@@ -6,7 +6,8 @@ import logging
 import time
 import cv2 as cv
 import os
-from net import DPNet
+import matplotlib.pyplot as plt
+from net import *
 
 PATH = '../DynamicProjectionData/'
 
@@ -71,33 +72,80 @@ def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False
 
 	return train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size
 
+def drawPlots(results, outdatapath):
+
+	# train
+	plt.figure('plot')
+	acc0, = plt.plot(results[:, 0], results[:, 1], 'r')
+	acc3, = plt.plot(results[:, 0], results[:, 2], 'g')
+	plt.xlabel('iter')
+	plt.ylabel('acc')
+	plt.ylim((0, 1))
+	plt.legend(handles = [acc0, acc3,], labels = ['acc0', 'acc3'])
+	plt.savefig(outdatapath + '/../train_acc.png')
+	plt.close()
+
+	plt.figure('plot')
+	loss, = plt.plot(results[:, 0], results[:, 3], 'b')
+	plt.xlabel('iter')
+	plt.ylabel('loss')
+	plt.ylim((0, 1))
+	plt.legend(handles = [loss,], labels = ['loss'])
+	plt.savefig(outdatapath + '/../train_loss.png')
+	plt.close()
+
+	# test
+	plt.figure('plot')
+	acc0, = plt.plot(results[:, 0], results[:, 4], 'r')
+	acc3, = plt.plot(results[:, 0], results[:, 5], 'g')
+	plt.xlabel('iter')
+	plt.ylabel('acc')
+	plt.ylim((0, 1))
+	plt.legend(handles = [acc0, acc3,], labels = ['acc0', 'acc3'])
+	plt.savefig(outdatapath + '/../test_acc.png')
+	plt.close()
+
+	plt.figure('plot')
+	loss, = plt.plot(results[:, 0], results[:, 6], 'b')
+	plt.xlabel('iter')
+	plt.ylabel('loss')
+	plt.ylim((0, 1))
+	plt.legend(handles = [loss,], labels = ['loss'])
+	plt.savefig(outdatapath + '/../test_loss.png')
+	plt.close()
+
 
 def train():
 
 	print('train')
 
 	start_iter, datetime = 0, ''
-	# start_iter, datetime = 11000 + 1, '20180524_140932'
+	# start_iter, datetime = 14000 + 1, '20180528_183506_0'
 
 
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	indatapath = PATH + 'capture_data_handled_0526/'
+	indatapath = PATH + 'train_data_540/'
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
 	data_size = 540
 	batch_size = 5
+	# lp_iter = 2000
+	lp_iter = 0
 	
-	remove_back = True
+	remove_back = False
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
 		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
 
 	model = DPNet(batch_size, height, width, normal_ori_i)
 
+	logging.info('net: 0')
 	logging.info('datapath: ' + indatapath)
 	logging.info('normal: ' + normal_ori[normal_ori_i])
+	logging.info('lp_iter: {}'.format(lp_iter))
+	logging.info('remove_back: {}'.format(remove_back))
 	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
 	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, 1))
 
@@ -105,21 +153,20 @@ def train():
 
 	with tf.Session() as sess:
 
-		train_step, accuracy, accuracy_3, loss_, BRDF_, I_, lr_, lp_ = model.net()
-
-		# print(train_step.name, accuracy.name, accuracy_3.name, loss_.name, BRDF_.name, I_.name)
+		train_step, accuracy, accuracy_3, loss_, reflect_, I_, lr_, lp_ = model.net()
 
 		if start_iter == 0:
 			sess.run(tf.global_variables_initializer())
 		else:
 			tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
 
+		results = np.empty([0, 7], np.float32)
+
 		for i in range(start_iter, 20000):
 			if i % 20 == 0:
 				print(i)
 			idx = i % end
-			if i < 2000:
-			# if i < 20000:
+			if i < lp_iter:
 				lamda = 1
 			else:
 				lamda = 0
@@ -127,8 +174,8 @@ def train():
 			if i % 100 == 0 or i == 19999:
 
 				# train accuracy
-				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_BRDF, train_ii = sess.run(
-					[accuracy, accuracy_3, loss_, lr_, lp_, BRDF_, I_], 
+				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_reflect, train_ii = sess.run(
+					[accuracy, accuracy_3, loss_, lr_, lp_, reflect_, I_], 
 					feed_dict = {
 						model.normal: train_normal[idx: idx + batch_size], 
 						model.color: train_color[idx: idx + batch_size], 
@@ -154,7 +201,7 @@ def train():
 				result_sum = np.zeros((5), np.float32)
 				while test_idx + batch_size <= test_size:
 					result = sess.run(
-						[accuracy, accuracy_3, loss_, lr_, lp_, BRDF_, I_], 
+						[accuracy, accuracy_3, loss_, lr_, lp_, reflect_, I_], 
 						feed_dict = {
 							model.normal: test_normal[test_idx: test_idx + batch_size], 
 							model.color: test_color[test_idx: test_idx + batch_size], 
@@ -187,12 +234,253 @@ def train():
 				print("step {}, testing accuracy {}, {}, loss {}, {}, {}".format(
 					i, test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp))
 
-			sess.run(train_step, feed_dict = {
+				results = np.append(
+					results, 
+					np.array([[i, train_accuracy, train_accuracy_3, train_loss, test_accuracy, test_accuracy_3, test_loss]]), 
+					axis = 0)
 
+			sess.run(train_step, feed_dict = {
 				model.normal: train_normal[idx: idx + batch_size], 
 				model.color: train_color[idx: idx + batch_size], 
 				model.mask: train_mask[idx: idx + batch_size],
 				model.lamda: lamda})
+
+			if i % 1000 == 0 or i == 19999:
+				tf.train.Saver().save(sess, ckptpath + '/model_latest')
+				tf.train.Saver().save(sess, ckptpath + '/model_{}'.format(i))
+
+		drawPlots(results, outdatapath)
+
+
+
+def train1():
+
+	print('train')
+
+	start_iter, datetime = 0, ''
+	# start_iter, datetime = 11000 + 1, '20180524_140932'
+
+
+	normal_ori_i = 0
+	normal_ori = ['train', 'depth2normal']
+
+	indatapath = PATH + 'train_data_540/'
+	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
+
+	data_size = 540
+	batch_size = 5
+	
+	remove_back = False
+	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
+		indatapath, outdatapath, data_size, batch_size, remove_back)
+	[size, height, width] = train_normal.shape[0: 3]
+
+	model = DPNet1(batch_size, height, width, normal_ori_i)
+
+	logging.info('net: 1')
+	logging.info('datapath: ' + indatapath)
+	logging.info('normal: ' + normal_ori[normal_ori_i])
+	logging.info('remove_back: {}'.format(remove_back))
+	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
+	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, 1))
+
+	end = size - batch_size
+
+	with tf.Session() as sess:
+
+		train_step, accuracy, accuracy_3, loss_, normal_, I_ = model.net()
+
+		if start_iter == 0:
+			sess.run(tf.global_variables_initializer())
+		else:
+			tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
+
+		for i in range(start_iter, 20000):
+			if i % 20 == 0:
+				print(i)
+			idx = i % end
+
+			if i % 100 == 0 or i == 19999:
+				# train accuracy
+				train_accuracy, train_accuracy_3, train_loss, train_ii = sess.run(
+					[accuracy, accuracy_3, loss_, I_], 
+					feed_dict = {
+						model.normal: train_normal[idx: idx + batch_size], 
+						model.color: train_color[idx: idx + batch_size], 
+						model.mask: train_mask[idx: idx + batch_size], 
+						model.keep_prob: 0.5})
+				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+					i, 
+					train_accuracy, 
+					train_accuracy_3, 
+					train_loss))
+				if i % 300 == 0 or i == 19999:
+					train_ii = (train_ii * 255).astype(np.uint8)
+					train_ii[train_ii > 255] = 255
+					for j in range(batch_size):
+						cv.imwrite(outdatapath + '/preimg{}_{}.png'.format(i, j), train_ii[j])
+
+				# test accuracy
+				test_idx = 0
+				result_cnt = 0
+				result_sum = np.zeros((3), np.float32)
+				while test_idx + batch_size <= test_size:
+					result = sess.run(
+						[accuracy, accuracy_3, loss_, I_], 
+						feed_dict = {
+							model.normal: test_normal[test_idx: test_idx + batch_size], 
+							model.color: test_color[test_idx: test_idx + batch_size], 
+							model.mask: test_mask[test_idx: test_idx + batch_size], 
+							model.keep_prob: 0.5})
+					print(result[2])
+					result_cnt += 1
+					result_sum += np.array(result[0: 3])
+
+					test_ii = result[3]
+					if i % 2000 == 0 or i == 19999:
+						test_ii = (test_ii * 255).astype(np.uint8)
+						test_ii[test_ii > 255] = 255
+						for j in range(batch_size):
+							cv.imwrite(outdatapath + '/testimg{}_{}.png'.format(i, test_idx + j), test_ii[j])
+
+					test_idx += batch_size
+
+				[test_accuracy, test_accuracy_3, test_loss] = result_sum / result_cnt
+				logging.info("{}: test step : {}, \ttesting accuracy : {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+					i, 
+					test_accuracy, 
+					test_accuracy_3, 
+					test_loss))
+
+				print("step {}, training accuracy {}, {}, loss {}".format(
+					i, train_accuracy, train_accuracy_3, train_loss))
+				print("step {}, testing accuracy {}, {}, loss {}".format(
+					i, test_accuracy, test_accuracy_3, test_loss))
+
+			sess.run(train_step, feed_dict = {
+				model.normal: train_normal[idx: idx + batch_size], 
+				model.color: train_color[idx: idx + batch_size], 
+				model.mask: train_mask[idx: idx + batch_size],
+				model.keep_prob: 0.5})
+
+			if i % 1000 == 0 or i == 19999:
+				tf.train.Saver().save(sess, ckptpath + '/model_latest')
+				tf.train.Saver().save(sess, ckptpath + '/model_{}'.format(i))
+
+
+def train2():
+
+	print('train')
+
+	start_iter, datetime = 0, ''
+	# start_iter, datetime = 11000 + 1, '20180524_140932'
+
+
+	normal_ori_i = 0
+	normal_ori = ['train', 'depth2normal']
+
+	indatapath = PATH + 'train_data_540/'
+	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
+
+	data_size = 540
+	batch_size = 5
+	
+	remove_back = False
+	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
+		indatapath, outdatapath, data_size, batch_size, remove_back)
+	[size, height, width] = train_normal.shape[0: 3]
+
+	model = DPNet2(batch_size, height, width, normal_ori_i)
+
+	logging.info('net: 2')
+	logging.info('datapath: ' + indatapath)
+	logging.info('normal: ' + normal_ori[normal_ori_i])
+	logging.info('remove_back: {}'.format(remove_back))
+	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
+	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, 1))
+
+	end = size - batch_size
+
+	with tf.Session() as sess:
+
+		train_step, accuracy, accuracy_3, loss_, label_, I_ = model.net()
+
+		if start_iter == 0:
+			sess.run(tf.global_variables_initializer())
+		else:
+			tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
+
+		for i in range(start_iter, 20000):
+			if i % 20 == 0:
+				print(i)
+			idx = i % end
+
+			if i % 100 == 0 or i == 19999:
+				# train accuracy
+				train_accuracy, train_accuracy_3, train_loss, train_ii = sess.run(
+					[accuracy, accuracy_3, loss_, I_], 
+					feed_dict = {
+						model.normal: train_normal[idx: idx + batch_size], 
+						model.color: train_color[idx: idx + batch_size], 
+						model.mask: train_mask[idx: idx + batch_size], 
+						model.keep_prob: 0.5})
+				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+					i, 
+					train_accuracy, 
+					train_accuracy_3, 
+					train_loss))
+				if i % 300 == 0 or i == 19999:
+					train_ii = (train_ii * 255).astype(np.uint8)
+					train_ii[train_ii > 255] = 255
+					for j in range(batch_size):
+						cv.imwrite(outdatapath + '/preimg{}_{}.png'.format(i, j), train_ii[j])
+
+				# test accuracy
+				test_idx = 0
+				result_cnt = 0
+				result_sum = np.zeros((3), np.float32)
+				while test_idx + batch_size <= test_size:
+					result = sess.run(
+						[accuracy, accuracy_3, loss_, I_], 
+						feed_dict = {
+							model.normal: test_normal[test_idx: test_idx + batch_size], 
+							model.color: test_color[test_idx: test_idx + batch_size], 
+							model.mask: test_mask[test_idx: test_idx + batch_size], 
+							model.keep_prob: 0.5})
+					print(result[2])
+					result_cnt += 1
+					result_sum += np.array(result[0: 3])
+
+					test_ii = result[3]
+					if i % 2000 == 0 or i == 19999:
+						test_ii = (test_ii * 255).astype(np.uint8)
+						test_ii[test_ii > 255] = 255
+						for j in range(batch_size):
+							cv.imwrite(outdatapath + '/testimg{}_{}.png'.format(i, test_idx + j), test_ii[j])
+
+					test_idx += batch_size
+
+				[test_accuracy, test_accuracy_3, test_loss] = result_sum / result_cnt
+				logging.info("{}: test step : {}, \ttesting accuracy : {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+					i, 
+					test_accuracy, 
+					test_accuracy_3, 
+					test_loss))
+
+				print("step {}, training accuracy {}, {}, loss {}".format(
+					i, train_accuracy, train_accuracy_3, train_loss))
+				print("step {}, testing accuracy {}, {}, loss {}".format(
+					i, test_accuracy, test_accuracy_3, test_loss))
+
+			sess.run(train_step, feed_dict = {
+				model.normal: train_normal[idx: idx + batch_size], 
+				model.color: train_color[idx: idx + batch_size], 
+				model.mask: train_mask[idx: idx + batch_size],
+				model.keep_prob: 0.5})
 
 			if i % 1000 == 0 or i == 19999:
 				tf.train.Saver().save(sess, ckptpath + '/model_latest')
