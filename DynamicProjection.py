@@ -504,59 +504,6 @@ class DynamicProjection(object):
 
 			idx = idx + 1
 
-	def getSceneData(self):
-
-		idx = -10
-
-		while idx < 0:
-			idx += 1
-			self.getRawDataWithKinect(False)
-
-		while idx < 10:
-			print(idx)
-
-			ch = cv.waitKey(1)
-			if ch == 27:
-				break
-
-			# wait 5 seconds
-			t0 = time.time()
-			while time.time() - t0 < 5:
-				_ = 0
-
-			print('start')
-
-			# capture for 2 seconds
-			t0 = time.time()
-			while time.time() - t0 < 2:
-				if MODE < 2:
-					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(False)  
-				else:
-					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawData()
-
-				if flag:
-
-					rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
-					depth = rgbd[:, :, 3]
-					color = rgbd[:, :, 0: 3]
-
-					os.mkdir('{}data/{}'.format(DATAPATH, idx))
-					cv.imwrite('{}data/{}/depth.png'.format(DATAPATH, idx), depth)
-					cv.imwrite('{}data/{}/color.png'.format(DATAPATH, idx), color)
-					cv.imwrite('{}data/{}/cameraColor.png'.format(DATAPATH, idx), cameraColor)
-					cv.imwrite('{}data/cameraColor{}.png'.format(DATAPATH, idx), cameraColor)
-					np.save('{}data/{}/depthback_origin.npy'.format(DATAPATH, idx), self.depthback_origin)
-					np.save('{}data/{}/colorback_origin.npy'.format(DATAPATH, idx), self.colorback_origin)
-					np.save('{}data/{}/rgbd.npy'.format(DATAPATH, idx), rgbd)
-					np.save('{}data/{}/rawdepth.npy'.format(DATAPATH, idx), rawdepth)
-					np.save('{}data/{}/rawcolor.npy'.format(DATAPATH, idx), rawcolor)
-					np.save('{}data/{}/rawinfrared.npy'.format(DATAPATH, idx), rawinfrared)
-					np.save('{}data/{}/cameraColor.npy'.format(DATAPATH, idx), cameraColor)
-
-					cv.imshow('cameraColor', cameraColor)
-
-
-			idx = idx + 1
 
 	def filter(self, depth, selection = 0):
 		if selection == 0:
@@ -590,9 +537,6 @@ class DynamicProjection(object):
 		# self.colorCalibration()
 		# run = False
 
-		# # record data
-		# self.getSceneData()
-		# run = False
 
 		# for calibration between camera and kinect
 		R, T = self.calculateRT()
@@ -658,8 +602,8 @@ class DynamicProjection(object):
 				# TODO: segmentation
 
 				normal_ori_i = 1
-				pre_BRDF = np.ones([424, 512, 3], np.float32)
-				pre_normal = None
+				# pre_BRDF = np.ones([424, 512, 3], np.float32)
+				# pre_normal = None
 
 				# TODO: BRDF reconstruction
 				# if normal_ori_i == 0:
@@ -684,11 +628,21 @@ class DynamicProjection(object):
 				# rawdepth_filter = np.load(DATAPATH + 'capture_data_handled_0527/rawdepth_filter0.npy')
 				# mask = np.load(DATAPATH + 'capture_data_handled_0527/mask0.npy')
 
-				# pre_normal = np.load(DATAPATH + 'test_log/20180527_141112_0/data/prenormal0.npy')
-				# # pre_normal = np.load(DATAPATH + 'capture_data_handled_0527/normal0.npy')
-				# pre_BRDF = np.load(DATAPATH + 'test_log/20180527_141112_0/data/preBRDF0.npy')
-				# pre_img = np.load(DATAPATH + 'test_log/20180527_141112_0/data/preimg0.npy')
+				rawdepth_filter = np.load(DATAPATH + 'train_data_40_rawdepth/rawdepth_filter1.npy')
+				mask = np.load(DATAPATH + 'train_data_40/mask1.npy')
+				pre_normal = np.load(DATAPATH + 'train_data_40/normal1.npy')
+				# pre_normal = np.load(DATAPATH + 'prediction/20180528_205359_0/data/prenormal1.npy')
+				pre_BRDF = np.load(DATAPATH + 'prediction/20180528_205359_0/data/prereflect1.npy')
+				pre_img = np.load(DATAPATH + 'prediction/20180528_205359_0/data/preimg1.npy')
 
+				# rawdepth_filter = np.load(DATAPATH + 'train_data_540_rawdepth/rawdepth_filter493.npy')
+				# mask = np.load(DATAPATH + 'train_data_540/mask493.npy')
+				# # pre_normal = np.load(DATAPATH + 'train_data_540/normal493.npy')
+				# pre_normal = np.load(DATAPATH + 'prediction/20180528_205619_0/data/prenormal493.npy')
+				# pre_BRDF = np.load(DATAPATH + 'prediction/20180528_205619_0/data/prereflect493.npy')
+				# pre_img = np.load(DATAPATH + 'prediction/20180528_205619_0/data/preimg493.npy')
+
+				pre_normal[..., 0] = 0 - pre_normal[..., 0]
 
 				# calibration between kinect and camera
 				cali = self.calibrateKinectCamera(R, T, base_p_irs, cameraColor, rawdepth, rawinfrared)
