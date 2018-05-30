@@ -51,25 +51,32 @@ def predict():
 
 	normal_ori = ['train', 'depth2normal']
 
-	# path = '20180525_171111_0'
-	# path = '20180526_101223_1'
-	path = '20180528_113802_0'
+	path = '20180530_081302_0'
 	normal_ori_i = int(path[len(path) - 1])
+	batch_size = 1
+	# datasize, datasize_trained = 540, 540
+	# datasize, datasize_trained = 40, 0
+	remove_back = False
+	# npy_list = []
+
+	datasize, datasize_trained, npy_list = 540, 540, [452]
+	datasize, datasize_trained, npy_list = 40, 0, [1]
+
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
-	indatapath = PATH + 'train_data_540/'
+	indatapath = PATH + 'train_data_{}/'.format(datasize)
 	outdatapath = prepareLog(normal_ori_i)
 
-	batch_size = 1
-	datasize, datasize_trained = 540, 540
-	normal, color, mask = readData(indatapath, datasize)
+	normal, color, mask = readData(indatapath, datasize, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]
 	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
+	logging.info('net: 0')
 	logging.info('datapath: ' + indatapath)
 	logging.info('datasize: {} （trained: {}）'.format(size, datasize_trained))
 	logging.info('normal: ' + normal_ori[normal_ori_i])
+	logging.info('remove_back: {}'.format(remove_back))
 	logging.info('lightdir: {}'.format(lightdir))
 	logging.info('modelpath: ' + ckptpath)
 
@@ -99,10 +106,11 @@ def predict():
 						model.lamda: 1.0}) 
 
 			# npy
-			if normal_ori_i == 0:
-				np.save(outdatapath + '/prenormal{}.npy'.format(i), pre_normal[0])
-			np.save(outdatapath + '/prereflect{}.npy'.format(i), reflect[0])
-			np.save(outdatapath + '/preimg{}.npy'.format(i), img[0])
+			if len(npy_list) == 0 or i in npy_list:
+				if normal_ori_i == 0:
+					np.save(outdatapath + '/prenormal{}.npy'.format(i), pre_normal[0])
+				np.save(outdatapath + '/prereflect{}.npy'.format(i), reflect[0])
+				np.save(outdatapath + '/preimg{}.npy'.format(i), img[0])
 
 			# img
 			if normal_ori_i == 0:
@@ -112,7 +120,7 @@ def predict():
 				cv.imwrite(outdatapath + '/prenormal{}.png'.format(i), pre_normal[0][..., ::-1])
 
 			# reflectance map
-			print(np.max(reflect[0]), np.min(reflect[0]), np.average(reflect[0]))
+			# print(np.max(reflect[0]), np.min(reflect[0]), np.average(reflect[0]))
 			min = np.min(reflect[0])
 			d = np.max(reflect[0]) - min
 			reflect = ((reflect - min) / d * 255).astype(np.uint8)
@@ -123,8 +131,28 @@ def predict():
 			img[img > 255] = 255
 			cv.imwrite(outdatapath + '/preimg{}.png'.format(i), img[0])
 		
+		sess.close()
 	
 
 
 if __name__ == '__main__':
+
+	# predict one
 	predict()
+
+	# # predict all
+
+	# filename = PATH + 'prediction/pathlist.txt'
+	# data_540 = readData(PATH + 'train_data_540/', 540)
+	# data_40 = readData(PATH + 'train_data_40/', 40)
+
+	# with open(filename) as f:
+	# 	for line in f:
+	# 		path = line[:len(line) - 1]
+	# 		print(path)
+	# 		predict(path, 540, 540, [452], data_540)
+
+	# 	for line in f:
+	# 		path = line[:len(line) - 1]
+	# 		print(path)
+	# 		predict(path, 40, 0, [1], data_40)

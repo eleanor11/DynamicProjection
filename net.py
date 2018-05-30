@@ -170,7 +170,7 @@ class DPNet:
 		Im_ = I_ * self.mask
 
 		if mode == 'training':
-			return train_step, accuracy, accuracy_3, loss, reflectm, Im_, loss_res, loss_prior
+			return train_step, accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
 		elif mode == 'testing':
 			return accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
 		elif mode == 'predicting':
@@ -352,7 +352,10 @@ class DPNet1:
 
 		mask_sum = tf.reduce_sum(self.mask) * 3
 
-		loss = tf.reduce_sum(self.mask * tf.abs(self.color - I_)) / mask_sum
+		l1 = tf.reduce_sum(self.mask * tf.abs(self.color - I_)) / mask_sum
+		l2 = tf.reduce_sum(self.mask * tf.abs(self.normal - normal)) / mask_sum
+		# loss = l1 + l2
+		loss = l1
 		train_step = tf.train.GradientDescentOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
 
 		accuracy = tf.reduce_sum(tf.cast(tf.equal(self.color, I_), tf.float32) * self.mask) / mask_sum
@@ -364,7 +367,7 @@ class DPNet1:
 
 
 		if mode == 'training':
-			return train_step, accuracy, accuracy_3, loss, normalm, Im_
+			return train_step, accuracy, accuracy_3, loss, l1, l2, normalm, Im_
 		elif mode == 'testing':
 			return accuracy, accuracy_3, loss, normalm, Im_
 		elif mode == 'predicting':

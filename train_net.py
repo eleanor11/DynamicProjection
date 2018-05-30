@@ -131,8 +131,8 @@ def train():
 
 	data_size = 540
 	batch_size = 5
-	# lp_iter = 2000
-	lp_iter = 0
+	lp_iter = 2000
+	# lp_iter = 20000
 	
 	remove_back = False
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
@@ -153,7 +153,7 @@ def train():
 
 	with tf.Session() as sess:
 
-		train_step, accuracy, accuracy_3, loss_, reflect_, I_, lr_, lp_ = model.net()
+		train_step, accuracy, accuracy_3, loss_, normal_, reflect_, I_, lr_, lp_ = model.net()
 
 		if start_iter == 0:
 			sess.run(tf.global_variables_initializer())
@@ -174,8 +174,8 @@ def train():
 			if i % 100 == 0 or i == 19999:
 
 				# train accuracy
-				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_reflect, train_ii = sess.run(
-					[accuracy, accuracy_3, loss_, lr_, lp_, reflect_, I_], 
+				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_nn, train_reflect, train_ii = sess.run(
+					[accuracy, accuracy_3, loss_, lr_, lp_, normal_, reflect_, I_], 
 					feed_dict = {
 						model.normal: train_normal[idx: idx + batch_size], 
 						model.color: train_color[idx: idx + batch_size], 
@@ -190,6 +190,11 @@ def train():
 					train_lr, 
 					train_lp))
 				if i % 300 == 0 or i == 19999:
+					train_nn = ((train_nn + 1) / 2 * 255).astype(np.uint8)
+					train_nn[train_nn > 255] = 255
+					for j in range(batch_size):
+						cv.imwrite(outdatapath + '/prenormal{}_{}.png'.format(i, j), train_nn[j][..., ::-1])
+
 					train_ii = (train_ii * 255).astype(np.uint8)
 					train_ii[train_ii > 255] = 255
 					for j in range(batch_size):
@@ -201,7 +206,7 @@ def train():
 				result_sum = np.zeros((5), np.float32)
 				while test_idx + batch_size <= test_size:
 					result = sess.run(
-						[accuracy, accuracy_3, loss_, lr_, lp_, reflect_, I_], 
+						[accuracy, accuracy_3, loss_, lr_, lp_, normal_, reflect_, I_], 
 						feed_dict = {
 							model.normal: test_normal[test_idx: test_idx + batch_size], 
 							model.color: test_color[test_idx: test_idx + batch_size], 
@@ -210,8 +215,14 @@ def train():
 					result_cnt += 1
 					result_sum += np.array(result[0: 5])
 
-					test_ii = result[6]
+					test_nn = result[5]
+					test_ii = result[7]
 					if i % 2000 == 0 or i == 19999:
+						test_nn = ((test_nn + 1) / 2 * 255).astype(np.uint8)
+						test_nn[test_nn > 255] = 255
+						for j in range(batch_size):
+							cv.imwrite(outdatapath + '/testnormal{}_{}.png'.format(i, test_idx + j), test_nn[j][..., ::-1])
+					
 						test_ii = (test_ii * 255).astype(np.uint8)
 						test_ii[test_ii > 255] = 255
 						for j in range(batch_size):
@@ -264,13 +275,14 @@ def train1():
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	indatapath = PATH + 'train_data_540/'
+	data_size = 40
+	batch_size = 5
+
+	indatapath = PATH + 'train_data_{}/'.format(data_size)
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
-	data_size = 540
-	batch_size = 5
-	
 	remove_back = False
+
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
 		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
@@ -288,7 +300,7 @@ def train1():
 
 	with tf.Session() as sess:
 
-		train_step, accuracy, accuracy_3, loss_, normal_, I_ = model.net()
+		train_step, accuracy, accuracy_3, loss_, loss1_, loss2_, normal_, I_ = model.net()
 
 		if start_iter == 0:
 			sess.run(tf.global_variables_initializer())
@@ -302,62 +314,69 @@ def train1():
 
 			if i % 100 == 0 or i == 19999:
 				# train accuracy
-				train_accuracy, train_accuracy_3, train_loss, train_ii = sess.run(
-					[accuracy, accuracy_3, loss_, I_], 
+				train_accuracy, train_accuracy_3, train_loss, tl1, tl2, train_nn, train_ii = sess.run(
+					[accuracy, accuracy_3, loss_, loss1_, loss2_, normal_, I_], 
 					feed_dict = {
 						model.normal: train_normal[idx: idx + batch_size], 
 						model.color: train_color[idx: idx + batch_size], 
 						model.mask: train_mask[idx: idx + batch_size], 
 						model.keep_prob: 0.5})
-				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f} \t{:.16f} \t{:.16f}".format(
 					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
 					i, 
 					train_accuracy, 
 					train_accuracy_3, 
-					train_loss))
-				if i % 300 == 0 or i == 19999:
+					train_loss,
+					tl1, tl2))
+				if i % 100 == 0 or i == 19999:
+					train_nn = ((train_nn + 1) / 2 * 255).astype(np.uint8)
+					train_nn[train_nn > 255] = 255
+					for j in range(batch_size):
+						cv.imwrite(outdatapath + '/prenormal{}_{}.png'.format(i, j), train_nn[j][..., ::-1])
+
 					train_ii = (train_ii * 255).astype(np.uint8)
 					train_ii[train_ii > 255] = 255
 					for j in range(batch_size):
 						cv.imwrite(outdatapath + '/preimg{}_{}.png'.format(i, j), train_ii[j])
 
-				# test accuracy
-				test_idx = 0
-				result_cnt = 0
-				result_sum = np.zeros((3), np.float32)
-				while test_idx + batch_size <= test_size:
-					result = sess.run(
-						[accuracy, accuracy_3, loss_, I_], 
-						feed_dict = {
-							model.normal: test_normal[test_idx: test_idx + batch_size], 
-							model.color: test_color[test_idx: test_idx + batch_size], 
-							model.mask: test_mask[test_idx: test_idx + batch_size], 
-							model.keep_prob: 0.5})
-					print(result[2])
-					result_cnt += 1
-					result_sum += np.array(result[0: 3])
+				print("step {}, training accuracy {}, {}, loss {}, {}, {}".format(
+					i, train_accuracy, train_accuracy_3, train_loss, tl1, tl2))
 
-					test_ii = result[3]
-					if i % 2000 == 0 or i == 19999:
-						test_ii = (test_ii * 255).astype(np.uint8)
-						test_ii[test_ii > 255] = 255
-						for j in range(batch_size):
-							cv.imwrite(outdatapath + '/testimg{}_{}.png'.format(i, test_idx + j), test_ii[j])
+				# # test accuracy
+				# test_idx = 0
+				# result_cnt = 0
+				# result_sum = np.zeros((3), np.float32)
+				# while test_idx + batch_size <= test_size:
+				# 	result = sess.run(
+				# 		[accuracy, accuracy_3, loss_, I_], 
+				# 		feed_dict = {
+				# 			model.normal: test_normal[test_idx: test_idx + batch_size], 
+				# 			model.color: test_color[test_idx: test_idx + batch_size], 
+				# 			model.mask: test_mask[test_idx: test_idx + batch_size], 
+				# 			model.keep_prob: 0.5})
+				# 	print(result[2])
+				# 	result_cnt += 1
+				# 	result_sum += np.array(result[0: 3])
 
-					test_idx += batch_size
+				# 	test_ii = result[3]
+				# 	if i % 2000 == 0 or i == 19999:
+				# 		test_ii = (test_ii * 255).astype(np.uint8)
+				# 		test_ii[test_ii > 255] = 255
+				# 		for j in range(batch_size):
+				# 			cv.imwrite(outdatapath + '/testimg{}_{}.png'.format(i, test_idx + j), test_ii[j])
 
-				[test_accuracy, test_accuracy_3, test_loss] = result_sum / result_cnt
-				logging.info("{}: test step : {}, \ttesting accuracy : {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
-					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
-					i, 
-					test_accuracy, 
-					test_accuracy_3, 
-					test_loss))
+				# 	test_idx += batch_size
 
-				print("step {}, training accuracy {}, {}, loss {}".format(
-					i, train_accuracy, train_accuracy_3, train_loss))
-				print("step {}, testing accuracy {}, {}, loss {}".format(
-					i, test_accuracy, test_accuracy_3, test_loss))
+				# [test_accuracy, test_accuracy_3, test_loss] = result_sum / result_cnt
+				# logging.info("{}: test step : {}, \ttesting accuracy : {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+				# 	time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+				# 	i, 
+				# 	test_accuracy, 
+				# 	test_accuracy_3, 
+				# 	test_loss))
+
+				# print("step {}, testing accuracy {}, {}, loss {}".format(
+				# 	i, test_accuracy, test_accuracy_3, test_loss))
 
 			sess.run(train_step, feed_dict = {
 				model.normal: train_normal[idx: idx + batch_size], 

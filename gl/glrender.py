@@ -6,9 +6,12 @@ import PIL.Image as im
 
 PROJECTION_MODE = False
 
-# 0: default	1: test 	2: 
+# 0: default	1: shader1 	2: shader2(brdf)
 SHADER = 1
-
+SHADER = 2
+lightPosition = np.array([0.0, 0.0, 1.0])
+# lightPosition = np.array([1.0, 0.0, 0.0])
+# lightPosition = np.array([0.0, 1.0, 0.0])
 
 def LoadProgram(shaderPathList):
 	shaderTypeMapping = {
@@ -38,8 +41,6 @@ def LoadProgram(shaderPathList):
 		glDetachShader(program, shader)
 		glDeleteShader(shader)
 	return program
-
-
 
 def LoadTexture(fileName):
 
@@ -139,13 +140,15 @@ class GLRenderer(object):
 		glUseProgram(self.program)
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
 
+		# lightPosition = np.array([0.0, 0.0, 1.0])
+
 		if SHADER == 1:
 			glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
 			glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			glUniform3fv(self.lightPosition, 1, np.array((0.0, 0.0, 1.0), np.float32))
+			glUniform3fv(self.lightPosition, 1, lightPosition)
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
 		elif SHADER == 2:
-			glUniform3fv(self.lightPosition, 1, np.array((0.0, 0.0, 1.0), np.float32))
+			glUniform3fv(self.lightPosition, 1, lightPosition)
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)

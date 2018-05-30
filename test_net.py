@@ -54,15 +54,17 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180527_124027_0'
+	path = '20180530_081302_0'
 	normal_ori_i = int(path[len(path) - 1])
-	ckptpath = PATH + 'train_log/' + path + '/ckpt'
-	indatapath = PATH + 'train_data_540/'
-	outdatapath = prepareLog(normal_ori_i)
-
 	batch_size = 1
 	datasize, datasize_trained = 540, 540
-	remove_back = True
+	# datasize, datasize_trained = 40, 0
+	remove_back = False
+
+	ckptpath = PATH + 'train_log/' + path + '/ckpt'
+	indatapath = PATH + 'train_data_{}/'.format(datasize)
+	outdatapath = prepareLog(normal_ori_i)
+
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
@@ -277,4 +279,20 @@ def test1():
 
 
 if __name__ == '__main__':
+	# test one
 	test()
+
+	# test all
+	# filename = PATH + 'test_log/testlist.txt'
+	# data_540 = readData(PATH + 'train_data_540/', 540)
+	# data_40 = readData(PATH + 'train_data_40/', 40)
+
+	# with open(filename) as f:
+	# 	for line in f:
+	# 		path = line[:len(line) - 1]
+	# 		print(path)
+	# 		predict(path, 540, 540, data_540)
+	# 	for line in f:
+	# 		path = line[:len(line) - 1]
+	# 		print(path)
+	# 		predict(path, 40, 0, data_40)

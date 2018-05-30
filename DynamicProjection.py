@@ -252,6 +252,20 @@ class DynamicProjection(object):
 
 		proj[mask, 0], proj[mask, 1], proj[mask, 2] = x, y, denom
 
+	# # test normal
+		# num = proj[mask].shape[0]
+		# vertices = np.zeros([num * 3, 3], np.float32)
+		# colors = np.ones([num * 3, 3], np.float32)
+		# normals = np.zeros([num * 3, 3], np.float32)
+		# vertices[::3], vertices[1::3], vertices[2::3] = proj[mask], proj[mask] + pre_normal[mask] / 200, proj[mask] + pre_normal[mask] / 100
+		# colors[::3] = colors[1::3] = colors[2::3] = (pre_normal[mask] + 1) / 2
+
+		# self.render.draw(vertices, colors, normals, None, self.mvp.T)
+
+		# return
+
+	# # test normal end
+
 		kernel_cul = np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
 		cul = cv.erode(mask.astype(np.uint8), kernel_cul, iterations = 1, borderValue = 0)
 		cul_cmask = cul.astype(np.bool)
@@ -297,8 +311,7 @@ class DynamicProjection(object):
 		normals = np.zeros((num * 3, 3), np.float32)
 		normals[0::3, :], normals[1::3, :], normals[2::3, :] = n0, n1, n2
 
-
-		tmp = tmp[..., ::-1]
+		pre_BRDF = pre_BRDF[..., ::-1]
 		b0 = np.concatenate([pre_BRDF[cul_cmask], pre_BRDF[cdr_cmask]], 0)
 		b2 = np.concatenate([pre_BRDF[cul_umask], pre_BRDF[cdr_dmask]], 0)
 		b1 = np.concatenate([pre_BRDF[cul_lmask], pre_BRDF[cdr_rmask]], 0)
@@ -601,11 +614,13 @@ class DynamicProjection(object):
 
 				# TODO: segmentation
 
-				normal_ori_i = 1
-				# pre_BRDF = np.ones([424, 512, 3], np.float32)
-				# pre_normal = None
 
 				# TODO: BRDF reconstruction
+
+				normal_ori_i = 1
+				pre_BRDF = np.ones([424, 512, 3], np.float32)
+				pre_normal = None
+
 				# if normal_ori_i == 0:
 				# 	pre_normal, pre_BRDF, pre_img = sess.run(
 				# 		content, 
@@ -628,21 +643,41 @@ class DynamicProjection(object):
 				# rawdepth_filter = np.load(DATAPATH + 'capture_data_handled_0527/rawdepth_filter0.npy')
 				# mask = np.load(DATAPATH + 'capture_data_handled_0527/mask0.npy')
 
-				rawdepth_filter = np.load(DATAPATH + 'train_data_40_rawdepth/rawdepth_filter1.npy')
-				mask = np.load(DATAPATH + 'train_data_40/mask1.npy')
-				pre_normal = np.load(DATAPATH + 'train_data_40/normal1.npy')
-				# pre_normal = np.load(DATAPATH + 'prediction/20180528_205359_0/data/prenormal1.npy')
-				pre_BRDF = np.load(DATAPATH + 'prediction/20180528_205359_0/data/prereflect1.npy')
-				pre_img = np.load(DATAPATH + 'prediction/20180528_205359_0/data/preimg1.npy')
+			# test render prediction
+				# normal_ori_i = 0
 
-				# rawdepth_filter = np.load(DATAPATH + 'train_data_540_rawdepth/rawdepth_filter493.npy')
-				# mask = np.load(DATAPATH + 'train_data_540/mask493.npy')
-				# # pre_normal = np.load(DATAPATH + 'train_data_540/normal493.npy')
-				# pre_normal = np.load(DATAPATH + 'prediction/20180528_205619_0/data/prenormal493.npy')
-				# pre_BRDF = np.load(DATAPATH + 'prediction/20180528_205619_0/data/prereflect493.npy')
-				# pre_img = np.load(DATAPATH + 'prediction/20180528_205619_0/data/preimg493.npy')
+				# # dataset 40 (1)
+				# datetime = '20180530_193824_0'
+				# path = DATAPATH + 'prediction/' + datetime + '/data/'
+				# outpath = DATAPATH + 'render_prediction/' + datetime
+				# if not os.path.isdir(outpath):
+				# 	os.mkdir(outpath)
 
-				pre_normal[..., 0] = 0 - pre_normal[..., 0]
+				# rawdepth_filter = np.load(DATAPATH + 'train_data_40_rawdepth/rawdepth_filter1.npy')
+				# mask = np.load(DATAPATH + 'train_data_40/mask1.npy')
+				# pre_normal = np.load(DATAPATH + 'train_data_40/normal1.npy')
+				# pre_normal = np.load(path + 'prenormal1.npy')
+				# pre_BRDF = np.load(path + 'prereflect1.npy')
+				# pre_img = np.load(path + 'preimg1.npy')
+
+				# # # dataset 540 (452)
+				# # datetime = '20180530_193148_0'
+				# # path = DATAPATH + 'prediction/' + datetime + '/data/'
+				# # outpath = DATAPATH + 'render_prediction/' + datetime
+				# # if not os.path.isdir(outpath):
+				# # 	os.mkdir(outpath)
+
+				# # rawdepth_filter = np.load(DATAPATH + 'train_data_540_rawdepth/rawdepth_filter452.npy')
+				# # mask = np.load(DATAPATH + 'train_data_540/mask452.npy')
+				# # pre_normal = np.load(DATAPATH + 'train_data_540/normal452.npy')
+				# # # pre_normal = np.load(path + 'prenormal452.npy')
+				# # pre_BRDF = np.load(path + 'prereflect452.npy')
+				# # pre_img = np.load(path + 'preimg452.npy')
+
+				# pre_normal[..., 0] = 0 - pre_normal[..., 0]
+
+			# test render prediction end
+
 
 				# calibration between kinect and camera
 				cali = self.calibrateKinectCamera(R, T, base_p_irs, cameraColor, rawdepth, rawinfrared)
@@ -658,11 +693,11 @@ class DynamicProjection(object):
 				# cv.imshow('corres', corres)
 
 
-				# # test color projection
+			# # test color projection
 				# corres = np.array([[[(i + j + k * 80) % 256 for k in range(3)] for j in range(512)] for i in range(424)])
 				# corres[np.logical_not(mask)] = np.array([0, 0, 0])
 
-				# # test image projection
+			# # test image projection
 				# image = cv.imread(DATAPATH + 'data/image.bmp')
 				# image = image[..., ::-1]
 
@@ -670,9 +705,11 @@ class DynamicProjection(object):
 				# w, h = image.shape[0], image.shape[1]
 				# corres[x0: x1, y0: y1] = np.array([[image[int((i - x0) / (x1 - x0) * h), int((y1 - 1 - j) / (y1 - y0) * w)] for j in range(y0, y1)] for i in range(x0, x1)])
 
-				# test position projection
+			# test position projection
 				# corres[200: 210, 250: 260] = np.array([255, 0, 0])
 				# corres[100: 110, 230: 240] = np.array([255, 0, 0])
+
+			# tests end
 
 				if SAVE:
 					np.save(DATAPATH + SUB + 'corres.npy', corres)
