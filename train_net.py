@@ -139,7 +139,8 @@ def train():
 		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
 
-	model = DPNet(batch_size, height, width, normal_ori_i)
+	lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
+	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
 	logging.info('net: 0')
 	logging.info('datapath: ' + indatapath)
@@ -148,6 +149,7 @@ def train():
 	logging.info('remove_back: {}'.format(remove_back))
 	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
 	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, 1))
+	logging.info('lightdir: {}'.format(lightdir))
 
 	end = size - batch_size
 

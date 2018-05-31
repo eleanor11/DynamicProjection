@@ -18,6 +18,7 @@ MODE = 2
 
 SAVE = False
 SAVEALL = False
+CAPTURE_TRAIN_DATA = False
 
 DATAPATH = '../DynamicProjectionData/'
 SUB = 'data/data_body/'
@@ -252,7 +253,7 @@ class DynamicProjection(object):
 
 		proj[mask, 0], proj[mask, 1], proj[mask, 2] = x, y, denom
 
-	# # test normal
+		# # test normal
 		# num = proj[mask].shape[0]
 		# vertices = np.zeros([num * 3, 3], np.float32)
 		# colors = np.ones([num * 3, 3], np.float32)
@@ -264,7 +265,7 @@ class DynamicProjection(object):
 
 		# return
 
-	# # test normal end
+		# # test normal end
 
 		kernel_cul = np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
 		cul = cv.erode(mask.astype(np.uint8), kernel_cul, iterations = 1, borderValue = 0)
@@ -517,6 +518,14 @@ class DynamicProjection(object):
 
 			idx = idx + 1
 
+	def prepareTrainDataPath(self, gid, gnum, gdelay, dirname):
+		path = PATH + dirname
+		while os.path.isfile(path + 'a_image_{}_color.png'.format(gid * gnum)):
+			gid += 1
+		rawdepth_b = self.depthback_origin.reshape([424, 512])
+		np.save(path + 'rawdepth_b_{}.npy'.format(gid), rawdepth_b)
+
+		return gid
 
 	def filter(self, depth, selection = 0):
 		if selection == 0:
@@ -550,7 +559,26 @@ class DynamicProjection(object):
 		# self.colorCalibration()
 		# run = False
 
+		# prepare train data path
+		if CAPTURE_TRAIN_DATA:
+			gid, gnum, gdelay = 0, 20, 0
+			cd_dirname = 'capture_data_origin_0529/'
+			gid = self.prepareTrainDataPath(gid, gnum, gdelay, cd_dirname)
+			
+			RED = np.array([0, 0, 255], np.uint8)
+			YELLOW = np.array([0, 255, 255], np.uint8)
+			GREEN = np.array([0, 255, 0], np.uint8)
 
+			hint = np.zeros([256, 256, 3], np.uint8)
+			hint[:, :] = GREEN
+			
+			print('capture data')
+
+			cd_idx = cd_start = gid * gnum
+			cd_num = cd_idx + gnum + gdelay
+			cd_time = time.time()
+
+		
 		# for calibration between camera and kinect
 		R, T = self.calculateRT()
 		base_p_irs = np.array([np.array([i, j, 1.0]) for i in range(424) for j in range(512)], np.float32)
@@ -618,7 +646,7 @@ class DynamicProjection(object):
 				# TODO: BRDF reconstruction
 
 				normal_ori_i = 1
-				pre_BRDF = np.ones([424, 512, 3], np.float32)
+				pre_reflect = np.ones([424, 512, 3], np.float32)
 				pre_normal = None
 
 				# if normal_ori_i == 0:
@@ -647,7 +675,7 @@ class DynamicProjection(object):
 				# normal_ori_i = 0
 
 				# # dataset 40 (1)
-				# datetime = '20180530_193824_0'
+				# datetime = '20180531_192936_0'
 				# path = DATAPATH + 'prediction/' + datetime + '/data/'
 				# outpath = DATAPATH + 'render_prediction/' + datetime
 				# if not os.path.isdir(outpath):
@@ -657,7 +685,7 @@ class DynamicProjection(object):
 				# mask = np.load(DATAPATH + 'train_data_40/mask1.npy')
 				# pre_normal = np.load(DATAPATH + 'train_data_40/normal1.npy')
 				# pre_normal = np.load(path + 'prenormal1.npy')
-				# pre_BRDF = np.load(path + 'prereflect1.npy')
+				# pre_reflect = np.load(path + 'prereflect1.npy')
 				# pre_img = np.load(path + 'preimg1.npy')
 
 				# # # dataset 540 (452)
@@ -671,7 +699,7 @@ class DynamicProjection(object):
 				# # mask = np.load(DATAPATH + 'train_data_540/mask452.npy')
 				# # pre_normal = np.load(DATAPATH + 'train_data_540/normal452.npy')
 				# # # pre_normal = np.load(path + 'prenormal452.npy')
-				# # pre_BRDF = np.load(path + 'prereflect452.npy')
+				# # pre_reflect = np.load(path + 'prereflect452.npy')
 				# # pre_img = np.load(path + 'preimg452.npy')
 
 				# pre_normal[..., 0] = 0 - pre_normal[..., 0]
@@ -688,7 +716,8 @@ class DynamicProjection(object):
 
 				# render content
 				corres = np.zeros([424, 512, 3], np.uint8)
-				corres[mask] = np.array([255, 255, 255])
+				# corres[mask] = np.array([255, 255, 255])
+				corres[mask] = np.array([127, 127, 127]) 
 				# corres[mask] = pre_img[mask]
 				# cv.imshow('corres', corres)
 
@@ -743,7 +772,34 @@ class DynamicProjection(object):
 					self.index += 1
 					print(self.index)
 
-				self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_BRDF)
+
+				# capture train data with projection on body
+				if CAPTURE_TRAIN_DATA and cd_idx < cd_num:
+					print('capture train data {}'.format(cd_idx))
+					cv.imshow('hint', hint)
+
+					if time.time() - cd_time >= 2:
+						hint[:, :] = YELLOW
+					if time.time() - cd_time >= 3:
+						hint[:, :] = RED
+					if time.time() - cd_time >= 5:
+						cd_idx += 1
+						hint[:, :] = GREEN
+						cd_time = time.time()
+
+					cv.imshow('camera', camera)
+
+					cv.imwrite(PATH + cd_dirname + 'a_image_{}_color.png'.format(idx), rawcolor.reshape([1080, 1920, 4])[:, :, 0: 3])
+					cv.imwrite(PATH + cd_dirname + 'a_image_{}_camera.png'.format(idx), cameraColor)
+
+					np.save(PATH + cd_dirname + 'camera{}.npy'.format(idx), cameraColor)
+					np.save(PATH + cd_dirname + 'color{}.npy'.format(idx), rawcolor)
+					np.save(PATH + cd_dirname + 'infrared{}.npy'.format(idx), rawinfrared)
+					np.save(PATH + cd_dirname + 'depth{}.npy'.format(idx), rawdepth)
+
+
+
+				self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_reflect)
 
 
 			

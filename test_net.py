@@ -54,7 +54,7 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180530_081302_0'
+	path = '20180531_113136_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	datasize, datasize_trained = 540, 540
@@ -68,7 +68,8 @@ def test():
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
-	lightdir = [0.0, 0.0, 1.0]
+	# lightdir = [0.0, 0.0, 1.0]
+	lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
 	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
 	logging.info('net: 0')

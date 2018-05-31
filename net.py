@@ -46,7 +46,7 @@ class DPNet:
 		self.height = height
 		self.width = width
 		self.normal_ori = normal_ori
-		self.lightdir = tf.constant(lightdir)
+		self.lightdir = tf.constant(lightdir, tf.float32)
 		self.oc = 16
 		self.learning_rate = 1e-2
 

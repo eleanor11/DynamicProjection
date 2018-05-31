@@ -6,12 +6,16 @@ import PIL.Image as im
 
 PROJECTION_MODE = False
 
-# 0: default	1: shader1 	2: shader2(brdf)
-SHADER = 1
-SHADER = 2
-lightPosition = np.array([0.0, 0.0, 1.0])
+# 0: default	
+# 1: shader1(lambert) 	
+# 2: shader2(reflect * normal)
+# 3: shader3(normal visualization)
+SHADER = 0
+# SHADER = 1
+# SHADER = 2
+# lightPosition = np.array([0.0, 0.0, 1.0])
 # lightPosition = np.array([1.0, 0.0, 0.0])
-# lightPosition = np.array([0.0, 1.0, 0.0])
+# lightPosition = np.array([1.0, 2.0, 0.0])
 
 def LoadProgram(shaderPathList):
 	shaderTypeMapping = {
