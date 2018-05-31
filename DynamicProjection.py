@@ -11,14 +11,13 @@ import time
 from numpy.linalg import inv
 import os
 
-MODE = 0
+MODE = 2
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use data for all, no Kinect
 
 SAVE = False
 SAVEALL = False
-CAPTURE_TRAIN_DATA = True
 
 DATAPATH = '../DynamicProjectionData/'
 SUB = 'data/data_body/'
@@ -518,14 +517,60 @@ class DynamicProjection(object):
 
 			idx = idx + 1
 
-	def prepareTrainDataPath(self, gid, gnum, gdelay, dirname):
-		path = DATAPATH + dirname
+	def captureTrainData(self, gid, gnum, gdelay, cd_dirname):
+		path = DATAPATH + cd_dirname
 		while os.path.isfile(path + 'a_image_{}_color.png'.format(gid * gnum)):
 			gid += 1
 		rawdepth_b = self.depthback_origin.reshape([424, 512])
 		np.save(path + 'rawdepth_b_{}.npy'.format(gid), rawdepth_b)
 
-		return gid
+		RED = np.array([0, 0, 255], np.uint8)
+		YELLOW = np.array([0, 255, 255], np.uint8)
+		GREEN = np.array([0, 255, 0], np.uint8)
+
+		hint = np.zeros([256, 256, 3], np.uint8)
+		hint[:, :] = GREEN
+		cv.imshow('hint', hint)
+		cv.waitKey(3000)
+
+		corres[:, :] = np.array([127, 127, 127])
+		self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_reflect)
+			
+		print('capture data')
+		idx = start = gid * gnumber
+		num = idx + gnumber + gdelay
+
+		while idx < num:
+			print(idx)
+
+			t0 = time.time()
+			while time.time() - t0 < 5:
+				cv.imshow('hint', hint)
+				cv.waitKey(1)
+
+				if time.time() - t0 >= 2:
+					hint[:, :] = YELLOW
+				if time.time() - t0 >= 3:
+					hint[:, :] = RED
+				if MODE < 2:
+					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(False)
+				else:
+					return
+				if flag:
+					cv.imshow('camera', cameraColor)
+
+					cv.imwrite(path + 'a_image_{}_color.png'.format(cd_idx), rawcolor.reshape([1080, 1920, 4])[:, :, 0: 3])
+					cv.imwrite(path + 'a_image_{}_camera.png'.format(cd_idx), cameraColor)
+
+					np.save(path + 'camera{}.npy'.format(cd_idx), cameraColor)
+					np.save(path + 'color{}.npy'.format(cd_idx), rawcolor)
+					np.save(path + 'infrared{}.npy'.format(cd_idx), rawinfrared)
+					np.save(path + 'depth{}.npy'.format(cd_idx), rawdepth)
+
+			idx += 1
+			hint[:, :] = GREEN
+
+
 
 	def filter(self, depth, selection = 0):
 		if selection == 0:
@@ -559,27 +604,14 @@ class DynamicProjection(object):
 		# self.colorCalibration()
 		# run = False
 
+		# capture train data
+		gid, gnum, gdelay = 0, 10, 0
+		cd_dirname = 'capture_data_origin_0531/'
+		self.captureTrainData(gid, gnum, gdelay, cd_dirname)
+		run = False
+
 		
 		print('start...')
-
-		# prepare train data path
-		if CAPTURE_TRAIN_DATA:
-			gid, gnum, gdelay = 0, 10, 0
-			cd_dirname = 'capture_data_origin_0531/'
-			gid = self.prepareTrainDataPath(gid, gnum, gdelay, cd_dirname)
-			
-			RED = np.array([0, 0, 255], np.uint8)
-			YELLOW = np.array([0, 255, 255], np.uint8)
-			GREEN = np.array([0, 255, 0], np.uint8)
-
-			hint = np.zeros([256, 256, 3], np.uint8)
-			hint[:, :] = GREEN
-			
-			cd_idx = cd_start = gid * gnum
-			cd_num = cd_idx + gnum + gdelay
-			cd_time = time.time()
-
-			print('capture train data {}'.format(cd_idx))
 
 		
 		# for calibration between camera and kinect
@@ -718,8 +750,7 @@ class DynamicProjection(object):
 
 				# render content
 				corres = np.zeros([424, 512, 3], np.uint8)
-				# corres[mask] = np.array([255, 255, 255])
-				corres[mask] = np.array([127, 127, 127]) 
+				corres[mask] = np.array([255, 255, 255])
 				# corres[mask] = pre_img[mask]
 				# cv.imshow('corres', corres)
 
@@ -773,33 +804,6 @@ class DynamicProjection(object):
 					self.time = time.time()
 					self.index += 1
 					print(self.index)
-
-
-				# capture train data with projection on body
-				if CAPTURE_TRAIN_DATA and cd_idx < cd_num:
-					cv.imshow('hint', hint)
-
-					cv.imshow('camera', cameraColor)
-
-					cv.imwrite(DATAPATH + cd_dirname + 'a_image_{}_color.png'.format(cd_idx), rawcolor.reshape([1080, 1920, 4])[:, :, 0: 3])
-					cv.imwrite(DATAPATH + cd_dirname + 'a_image_{}_camera.png'.format(cd_idx), cameraColor)
-
-					np.save(DATAPATH + cd_dirname + 'camera{}.npy'.format(cd_idx), cameraColor)
-					np.save(DATAPATH + cd_dirname + 'color{}.npy'.format(cd_idx), rawcolor)
-					np.save(DATAPATH + cd_dirname + 'infrared{}.npy'.format(cd_idx), rawinfrared)
-					np.save(DATAPATH + cd_dirname + 'depth{}.npy'.format(cd_idx), rawdepth)
-
-					if time.time() - cd_time >= 10:
-						cd_idx += 1
-						if cd_idx < cd_num:
-							print('capture train data {}'.format(cd_idx))
-						hint[:, :] = GREEN
-						cd_time = time.time()
-					elif time.time() - cd_time >= 8:
-						hint[:, :] = RED
-					elif time.time() - cd_time >= 6:
-						hint[:, :] = YELLOW
-
 
 
 				self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_reflect)
