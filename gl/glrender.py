@@ -9,7 +9,6 @@ PROJECTION_MODE = False
 # 0: default	
 # 1: shader1(lambert) 	
 # 2: shader2(reflect * normal)
-# 3: shader3(normal visualization)
 SHADER = 0
 # SHADER = 1
 # SHADER = 2
@@ -82,8 +81,9 @@ class GLRenderer(object):
 		glBindVertexArray(self.vertexArr)
 		self.vertexBuf = glGenBuffers(1)
 		self.colorBuf = glGenBuffers(1)
-		self.normalBuf = glGenBuffers(1)
-		if SHADER == 2:
+		if SHADER > 0:
+			self.normalBuf = glGenBuffers(1)
+		if SHADER > 1:
 			self.brdfBuf = glGenBuffers(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
@@ -137,8 +137,6 @@ class GLRenderer(object):
 		# glActiveTexture(GL_TEXTURE1)
 		# glEnable(GL_TEXTURE_2D)
 
-
-
 	def draw(self, vertices, colors, normals, brdfs, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program)
@@ -178,19 +176,22 @@ class GLRenderer(object):
 			None
 		)
 
-		glEnableVertexAttribArray(2)
-		glBindBuffer(GL_ARRAY_BUFFER, self.normalBuf)
-		glBufferData(GL_ARRAY_BUFFER, normals, GL_STATIC_DRAW)
-		glVertexAttribPointer(
-			2, 
-			normals.shape[1],
-			GL_FLOAT, 
-			GL_FALSE, 
-			0, 
-			None
-		)
+		# SHADER 1, 2
+		if SHADER > 0:
+			glEnableVertexAttribArray(2)
+			glBindBuffer(GL_ARRAY_BUFFER, self.normalBuf)
+			glBufferData(GL_ARRAY_BUFFER, normals, GL_STATIC_DRAW)
+			glVertexAttribPointer(
+				2, 
+				normals.shape[1],
+				GL_FLOAT, 
+				GL_FALSE, 
+				0, 
+				None
+			)
 
-		if SHADER == 2:
+		# SHADER 2
+		if SHADER > 1:
 			glEnableVertexAttribArray(3)
 			glBindBuffer(GL_ARRAY_BUFFER, self.brdfBuf)
 			glBufferData(GL_ARRAY_BUFFER, brdfs, GL_STATIC_DRAW)
@@ -210,8 +211,9 @@ class GLRenderer(object):
 
 		glDisableVertexAttribArray(0)
 		glDisableVertexAttribArray(1)
-		glDisableVertexAttribArray(2)
-		if SHADER == 2:
+		if SHADER > 0:
+			glDisableVertexAttribArray(2)
+		if SHADER > 1:
 			glDisableVertexAttribArray(3)
 		glUseProgram(0)
 		glutSwapBuffers()

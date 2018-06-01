@@ -234,6 +234,14 @@ class DynamicProjection(object):
 			self.colorback_origin = np.load(DATAPATH + SUBIN + 'colorback_origin.npy')
 
 
+	def projectLight(self, rawdepth, mask):
+
+		vertices = np.array([[-1, -1, 0], [3, -1, 0], [-1, 3, 0]], np.float32)
+		colors = np.ones([3, 3], np.float32) * 0.5
+
+		self.render.draw(vertices, colors, None, None, self.mvp.T)
+
+
 	def project(self, rawdepth, corres, mask, normal_ori_i, pre_normal, pre_BRDF):
 		proj = np.zeros([424, 512, 3], np.float32)
 
@@ -533,12 +541,10 @@ class DynamicProjection(object):
 		cv.imshow('hint', hint)
 		cv.waitKey(3000)
 
-		corres[:, :] = np.array([127, 127, 127])
-		self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_reflect)
-			
+	
 		print('capture data')
-		idx = start = gid * gnumber
-		num = idx + gnumber + gdelay
+		idx = start = gid * gnum
+		num = idx + gnum + gdelay
 
 		while idx < num:
 			print(idx)
@@ -555,17 +561,21 @@ class DynamicProjection(object):
 				if MODE < 2:
 					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(False)
 				else:
-					return
+					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawData()
 				if flag:
+
+					mask = np.abs(rawdepth.reshape([424, 512]) - rawdepth_b) > 50
+					self.projectLight(rawdepth, mask)
+
 					cv.imshow('camera', cameraColor)
 
-					cv.imwrite(path + 'a_image_{}_color.png'.format(cd_idx), rawcolor.reshape([1080, 1920, 4])[:, :, 0: 3])
-					cv.imwrite(path + 'a_image_{}_camera.png'.format(cd_idx), cameraColor)
+					cv.imwrite(path + 'a_image_{}_color.png'.format(idx), rawcolor.reshape([1080, 1920, 4])[:, :, 0: 3])
+					cv.imwrite(path + 'a_image_{}_camera.png'.format(idx), cameraColor)
 
-					np.save(path + 'camera{}.npy'.format(cd_idx), cameraColor)
-					np.save(path + 'color{}.npy'.format(cd_idx), rawcolor)
-					np.save(path + 'infrared{}.npy'.format(cd_idx), rawinfrared)
-					np.save(path + 'depth{}.npy'.format(cd_idx), rawdepth)
+					np.save(path + 'camera{}.npy'.format(idx), cameraColor)
+					np.save(path + 'color{}.npy'.format(idx), rawcolor)
+					np.save(path + 'infrared{}.npy'.format(idx), rawinfrared)
+					np.save(path + 'depth{}.npy'.format(idx), rawdepth)
 
 			idx += 1
 			hint[:, :] = GREEN
