@@ -47,6 +47,21 @@ def readData(indatapath, datasize, remove_back = False):
 
 	return normal, color, mask
 
+def gray2rainbow(gray):
+	rainbow = np.zeros([gray.shape[0], gray.shape[1], 3])
+	mask = gray > 204
+	rainbow[mask, 0], rainbow[mask, 1], rainbow[mask, 2] = 0, 127 - (127 * (gray[mask] - 204) / 51 + 0.5).astype(np.uint8), 255
+	mask = gray <= 204
+	rainbow[mask, 0], rainbow[mask, 1], rainbow[mask, 2] = 0, 255 - (128 * (gray[mask] - 153) / 51 + 0.5).astype(np.uint8), 255
+	mask = gray <= 153
+	rainbow[mask, 0], rainbow[mask, 1], rainbow[mask, 2] = 0, 255, (gray[mask] - 102) * 5
+	mask = gray <= 102
+	rainbow[mask, 0], rainbow[mask, 1], rainbow[mask, 2] = 255 - (gray[mask] - 51) * 5, 255, 0
+	mask = gray <= 51
+	rainbow[mask, 0], rainbow[mask, 1], rainbow[mask, 2] = 255, gray[mask] * 5, 0
+	
+	return rainbow
+
 
 def test():
 
@@ -54,22 +69,26 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180531_113136_0'
+	path = '20180608_123821_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
-	datasize, datasize_trained = 540, 540
+	# datasize, datasize_trained = 600, 600
+	datasize, datasize_trained = 500, 500
 	# datasize, datasize_trained = 40, 0
+
+	# remove_back = True
 	remove_back = False
 
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
 	indatapath = PATH + 'train_data_{}/'.format(datasize)
+	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)
 	outdatapath = prepareLog(normal_ori_i)
 
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
-	# lightdir = [0.0, 0.0, 1.0]
-	lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
+	lightdir = [0.0, 0.0, 1.0]
+	# lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
 	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
 	logging.info('net: 0')
@@ -91,6 +110,8 @@ def test():
 		result_old = np.array([0.0, 0.0, 0.0])
 		result_new = np.array([0.0, 0.0, 0.0])
 
+		max_idx, max_acc, max_acc3 = -1, 0, 0
+
 		for i in range(datasize):
 			if normal_ori_i == 0:
 				accuracy, accuracy_3, loss, lr, lp, pre_normal, reflect, img = sess.run(
@@ -108,6 +129,11 @@ def test():
 						model.color: color[i: i + batch_size], 
 						model.mask: mask[i: i + batch_size], 
 						model.lamda: 1.0}) 
+
+			if accuracy_3 > max_acc3:
+				max_acc = accuracy
+				max_acc3 = accuracy_3
+				max_idx = i
 
 			result_sum += np.array([accuracy, accuracy_3, loss])
 			if i < datasize_trained:
@@ -133,10 +159,10 @@ def test():
 			if SAVE_IMG:
 				# normal
 				if normal_ori_i == 0:
-					if SAVE_DIF:
-						dif_normal = np.abs(pre_normal[0] - normal[i])
-						dif_normal_avg = np.average(dif_normal, axis = 2)
-						cv.imwrite(outdatapath + '/difnormal_avg{}.png'.format(i), (dif_normal_avg / 2 * 255).astype(np.uint8))
+					# if SAVE_DIF:
+					# 	dif_normal = np.abs(pre_normal[0] - normal[i])
+					# 	dif_normal_avg = np.average(dif_normal, axis = 2)
+					# 	cv.imwrite(outdatapath + '/difnormal_avg{}.png'.format(i), (dif_normal_avg / 2 * 255).astype(np.uint8))
 					pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
 					pre_normal[pre_normal > 255] = 255
 					cv.imwrite(outdatapath + '/prenormal{}.png'.format(i), pre_normal[0][..., ::-1])
@@ -151,7 +177,8 @@ def test():
 				if SAVE_DIF:
 					dif_img = np.abs(img[0] - color[i] * mask[i])
 					dif_img_avg = np.average(dif_img, axis = 2)
-					cv.imwrite(outdatapath + '/difimg_avg{}.png'.format(i), (dif_img_avg / np.max(dif_img_avg) * 255).astype(np.uint8))
+					dif_rainbow = gray2rainbow((dif_img_avg / np.max(dif_img_avg) * 255).astype(np.uint8)) * mask[i]
+					cv.imwrite(outdatapath + '/difimg_avg{}.png'.format(i), dif_rainbow)
 				img = (img * 255).astype(np.uint8)
 				img[img > 255] = 255
 				cv.imwrite(outdatapath + '/preimg{}.png'.format(i), img[0])
@@ -169,6 +196,8 @@ def test():
 		result_sum /= datasize
 		logging.info("{}: total average: accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
 			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_sum[0], result_sum[1], result_sum[2]))
+		logging.info("{}: max acc3: idx: {}, accuracy: {:.16f}, \t{:.16f}".format(
+			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), max_idx, max_acc, max_acc3)
 		print("total average: accuracy {}, {}, loss {}".format(result_sum[0], result_sum[1], result_sum[2]))
 
 
@@ -178,7 +207,7 @@ def test1():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180528_113802_0'
+	path = '20180608_102521_1'
 	normal_ori_i = int(path[len(path) - 1])
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
 	indatapath = PATH + 'train_data_540/'
@@ -186,7 +215,7 @@ def test1():
 
 	batch_size = 1
 	datasize, datasize_trained = 540, 540
-	remove_back = False
+	remove_back = True
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
@@ -244,10 +273,10 @@ def test1():
 
 			# img
 			if normal_ori_i == 0:
-				# dif normal
-				dif_normal = np.abs(pre_normal[0] - normal[i])
-				dif_normal_avg = np.average(dif_normal, axis = 2)
-				cv.imwrite(outdatapath + '/difnormal_avg{}.png'.format(i), (dif_normal_avg / 2 * 255).astype(np.uint8))
+				# # dif normal
+				# dif_normal = np.abs(pre_normal[0] - normal[i])
+				# dif_normal_avg = np.average(dif_normal, axis = 2)
+				# cv.imwrite(outdatapath + '/difnormal_avg{}.png'.format(i), (dif_normal_avg / 2 * 255).astype(np.uint8))
 				# normal
 				pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
 				pre_normal[pre_normal > 255] = 255

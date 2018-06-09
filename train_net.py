@@ -126,20 +126,26 @@ def train():
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	indatapath = PATH + 'train_data_540/'
+	data_size = 500
+	batch_size = 5
+
+	# lp_iter = 2000
+	# lp_iter = 0
+	lp_iter = 20000
+	
+	# lamda_default = 1
+	lamda_default = 10
+
+	# indatapath = PATH + 'train_data_{}/'.format(data_size)
+	indatapath = PATH + 'train_data_{}_1/'.format(data_size)
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
-	data_size = 540
-	batch_size = 5
-	lp_iter = 2000
-	# lp_iter = 20000
-	
-	remove_back = False
+	remove_back = True
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
 		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
 
-	lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
+	lightdir = np.array([0, 0, 1])
 	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
 	logging.info('net: 0')
@@ -148,7 +154,7 @@ def train():
 	logging.info('lp_iter: {}'.format(lp_iter))
 	logging.info('remove_back: {}'.format(remove_back))
 	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
-	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, 1))
+	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, lamda_default))
 	logging.info('lightdir: {}'.format(lightdir))
 
 	end = size - batch_size
@@ -169,15 +175,15 @@ def train():
 				print(i)
 			idx = i % end
 			if i < lp_iter:
-				lamda = 1
+				lamda = lamda_default
 			else:
 				lamda = 0
 
 			if i % 100 == 0 or i == 19999:
 
 				# train accuracy
-				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_nn, train_reflect, train_ii = sess.run(
-					[accuracy, accuracy_3, loss_, lr_, lp_, normal_, reflect_, I_], 
+				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_ii = sess.run(
+					[accuracy, accuracy_3, loss_, lr_, lp_, I_], 
 					feed_dict = {
 						model.normal: train_normal[idx: idx + batch_size], 
 						model.color: train_color[idx: idx + batch_size], 
@@ -191,16 +197,36 @@ def train():
 					train_loss, 
 					train_lr, 
 					train_lp))
-				if i % 300 == 0 or i == 19999:
-					train_nn = ((train_nn + 1) / 2 * 255).astype(np.uint8)
-					train_nn[train_nn > 255] = 255
-					for j in range(batch_size):
-						cv.imwrite(outdatapath + '/prenormal{}_{}.png'.format(i, j), train_nn[j][..., ::-1])
 
+				if i % 300 == 0 or i == 19999:
 					train_ii = (train_ii * 255).astype(np.uint8)
 					train_ii[train_ii > 255] = 255
 					for j in range(batch_size):
 						cv.imwrite(outdatapath + '/preimg{}_{}.png'.format(i, j), train_ii[j])
+
+				if i == 19999:
+					train_idx = 0
+					result_cnt = 0
+					result_sum = np.zeros((5), np.float32)
+					while train_idx + batch_size <= train_size:
+						result = sess.run(
+							[accuracy, accuracy_3, loss_, lr_, lp_], 
+							feed_dict = {
+								model.normal: train_normal[train_idx: train_idx + batch_size], 
+								model.color: train_color[train_idx: train_idx + batch_size], 
+								model.mask: train_mask[train_idx: train_idx + batch_size], 
+								model.lamda: lamda})
+						result_cnt += 1
+						result_sum += np.array(result)
+						train_idx += batch_size
+					[train_accuracy_total, train_accuracy_3_total, train_loss_total, train_lp_total, train_lr_total] = result_sum / result_cnt
+					logging.info("{}: train step (total): \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
+						time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+						train_accuracy_total, 
+						train_accuracy_3_total, 
+						train_loss_total, 
+						train_lr_total, 
+						train_lp_total))
 
 				# test accuracy
 				test_idx = 0
@@ -208,7 +234,7 @@ def train():
 				result_sum = np.zeros((5), np.float32)
 				while test_idx + batch_size <= test_size:
 					result = sess.run(
-						[accuracy, accuracy_3, loss_, lr_, lp_, normal_, reflect_, I_], 
+						[accuracy, accuracy_3, loss_, lr_, lp_, I_], 
 						feed_dict = {
 							model.normal: test_normal[test_idx: test_idx + batch_size], 
 							model.color: test_color[test_idx: test_idx + batch_size], 
@@ -217,14 +243,8 @@ def train():
 					result_cnt += 1
 					result_sum += np.array(result[0: 5])
 
-					test_nn = result[5]
-					test_ii = result[7]
-					if i % 2000 == 0 or i == 19999:
-						test_nn = ((test_nn + 1) / 2 * 255).astype(np.uint8)
-						test_nn[test_nn > 255] = 255
-						for j in range(batch_size):
-							cv.imwrite(outdatapath + '/testnormal{}_{}.png'.format(i, test_idx + j), test_nn[j][..., ::-1])
-					
+					test_ii = result[5]
+					if i % 2000 == 0:
 						test_ii = (test_ii * 255).astype(np.uint8)
 						test_ii[test_ii > 255] = 255
 						for j in range(batch_size):
@@ -246,11 +266,19 @@ def train():
 					i, train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp))
 				print("step {}, testing accuracy {}, {}, loss {}, {}, {}".format(
 					i, test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp))
+				if i == 19999:
+					print("total: training accuracy {}, {}, loss {}, {}, {}".format(
+						train_accuracy_total, train_accuracy_3_total, train_loss_total, train_lr_total, train_lp_total))
+					print("total: testing accuracy {}, {}, loss {}, {}, {}".format(
+						test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp))
 
 				results = np.append(
 					results, 
 					np.array([[i, train_accuracy, train_accuracy_3, train_loss, test_accuracy, test_accuracy_3, test_loss]]), 
 					axis = 0)
+
+				
+				
 
 			sess.run(train_step, feed_dict = {
 				model.normal: train_normal[idx: idx + batch_size], 

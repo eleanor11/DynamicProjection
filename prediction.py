@@ -31,6 +31,8 @@ def readData(indatapath, datasize, remove_back = False):
 	mask = np.empty([0, 424, 512], np.bool)
 
 	for i in range(datasize):
+		if i % 50 == 0:
+			print(i)
 		normal = np.append(normal, [np.load(indatapath + 'normal{}.npy'.format(i))], axis = 0)
 		color = np.append(color, [np.load(indatapath + 'color{}.npy'.format(i))], axis = 0)
 		mask = np.append(mask, [np.load(indatapath + 'mask{}.npy'.format(i))], axis = 0)
@@ -51,7 +53,7 @@ def predict():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180531_113136_0'
+	path = '20180606_123609_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	# datasize, datasize_trained = 540, 540
@@ -60,17 +62,20 @@ def predict():
 	# npy_list = []
 
 	# datasize, datasize_trained, npy_list = 540, 540, [452]
-	datasize, datasize_trained, npy_list = 40, 0, [1]
+	# datasize, datasize_trained, npy_list = 40, 0, [1]
+	# datasize, datasize_trained, npy_list = 600, 600, [114]
+	datasize, datasize_trained, npy_list = 12, 0, []
 
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
-	indatapath = PATH + 'train_data_{}/'.format(datasize)
+	# indatapath = PATH + 'train_data_{}/'.format(datasize)
+	indatapath = PATH + 'train_data_pig/'
 	outdatapath = prepareLog(normal_ori_i)
 
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
-	# lightdir = [0.0, 0.0, 1.0]
-	lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
+	lightdir = [0.0, 0.0, 1.0]
+	# lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
 	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
 	logging.info('net: 0')
