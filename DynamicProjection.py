@@ -3,6 +3,7 @@ from pykinect2.PyKinectV2 import *
 from pykinect2 import PyKinectRuntime
 import cv2 as cv
 import numpy as np
+import tensorflow as tf
 from gl.glrender import GLRenderer
 import gl.glm as glm
 import ctypes
@@ -10,6 +11,7 @@ import copy
 import time
 from numpy.linalg import inv
 import os
+from net import DPNet
 
 MODE = 2
 # 0: record new background and capture new data by Kinect
@@ -652,8 +654,8 @@ class DynamicProjection(object):
 		elif selection == 3:
 			return cv.GaussianBlur(depth, (5, 5), 0)
 
-	def initNet(net_path, sess):
-		normal_ori = int(path[len(path) - 1])
+	def initNet(self, path, sess):
+		normal_ori_i = int(path[len(path) - 1])
 		lightdir = [0.0, 0.0, 1.0]
 		batch_size, height, width = 1, 424, 512
 		model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
@@ -689,7 +691,7 @@ class DynamicProjection(object):
 
 		# init net
 		sess = tf.Session()
-		model, normal_ori_i, content = initNet('20180609_234840_0', sess)
+		model, normal_ori_i, content = self.initNet('20180609_234840_0', sess)
 		
 		self.time = time.time()
 		while run:
@@ -752,7 +754,7 @@ class DynamicProjection(object):
 				# pre_reflect = np.ones([424, 512, 3], np.float32)
 				# pre_normal = None
 
-				
+
 				normal_ori_i = 0
 				normal = self.depth2normal(rawdepth_filter, mask)
 
@@ -762,7 +764,7 @@ class DynamicProjection(object):
 						feed_dict = {
 							model.normal: [normal], 
 							model.color: [color], 
-							model.mask: [mask], 
+							model.mask: [np.expand_dims(mask, 2)], 
 							model.lamda: 1.0
 						})
 				else:
@@ -772,7 +774,7 @@ class DynamicProjection(object):
 						feed_dict = {
 							model.normal: [normal], 
 							model.color: [color], 
-							model.mask: [mask], 
+							model.mask: [np.expand_dims(mask, 2)], 
 							model.lamda: 1.0
 						})
 
@@ -837,7 +839,7 @@ class DynamicProjection(object):
 				# render content
 				corres = np.zeros([424, 512, 3], np.uint8)
 				# corres[mask] = np.array([255, 255, 255])
-				corres[mask] = pre_img[mask]
+				corres[mask] = pre_img[0][mask]
 				# cv.imshow('corres', corres)
 
 
@@ -892,7 +894,7 @@ class DynamicProjection(object):
 					print(self.index)
 
 
-				self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal, pre_reflect)
+				self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0])
 
 
 			
