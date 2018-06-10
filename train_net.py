@@ -72,7 +72,7 @@ def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False
 
 	return train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size
 
-def drawPlots(results, outdatapath):
+def drawPlots(results, outdatapath, lamda = 1):
 
 	# train
 	plt.figure('plot')
@@ -89,7 +89,7 @@ def drawPlots(results, outdatapath):
 	loss, = plt.plot(results[:, 0], results[:, 3], 'b')
 	plt.xlabel('iter')
 	plt.ylabel('loss')
-	plt.ylim((0, 1))
+	plt.ylim((0, lamda))
 	plt.legend(handles = [loss,], labels = ['loss'])
 	plt.savefig(outdatapath + '/../train_loss.png')
 	plt.close()
@@ -109,7 +109,7 @@ def drawPlots(results, outdatapath):
 	loss, = plt.plot(results[:, 0], results[:, 6], 'b')
 	plt.xlabel('iter')
 	plt.ylabel('loss')
-	plt.ylim((0, 1))
+	plt.ylim((0, lamda))
 	plt.legend(handles = [loss,], labels = ['loss'])
 	plt.savefig(outdatapath + '/../test_loss.png')
 	plt.close()
@@ -290,7 +290,7 @@ def train():
 				tf.train.Saver().save(sess, ckptpath + '/model_latest')
 				tf.train.Saver().save(sess, ckptpath + '/model_{}'.format(i))
 
-		drawPlots(results, outdatapath)
+		drawPlots(results, outdatapath, lamda_default)
 
 
 

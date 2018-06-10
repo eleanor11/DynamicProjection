@@ -47,6 +47,28 @@ def readData(indatapath, datasize, remove_back = False):
 
 	return normal, color, mask
 
+def readData1(indatapath, dataidx, remove_back = False):
+
+	print('load data')
+
+	normal = np.empty([0, 424, 512, 3], np.float32)
+	color = np.empty([0, 424, 512, 3], np.uint8)
+	mask = np.empty([0, 424, 512], np.bool)
+
+	for i in dataidx:
+		normal = np.append(normal, [np.load(indatapath + 'normal{}.npy'.format(i))], axis = 0)
+		color = np.append(color, [np.load(indatapath + 'color{}.npy'.format(i))], axis = 0)
+		mask = np.append(mask, [np.load(indatapath + 'mask{}.npy'.format(i))], axis = 0)
+
+	mask = np.expand_dims(mask, axis = 3)
+	color = color.astype(np.float32) / 255.0
+
+	if remove_back:
+		normal = normal * mask
+		color = color * mask
+
+	return normal, color, mask
+
 def gray2rainbow(gray):
 	rainbow = np.zeros([gray.shape[0], gray.shape[1], 3])
 	mask = gray > 204
@@ -69,22 +91,25 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180608_123821_0'
+	path = '20180609_195324_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	# datasize, datasize_trained = 600, 600
-	datasize, datasize_trained = 500, 500
+	# datasize, datasize_trained = 500, 500
 	# datasize, datasize_trained = 40, 0
+	datasize, datasize_trained = 6, 0
 
-	# remove_back = True
-	remove_back = False
+	remove_back = True
+	# remove_back = False
 
-	ckptpath = PATH + 'train_log/' + path + '/ckpt'
-	indatapath = PATH + 'train_data_{}/'.format(datasize)
+	# indatapath = PATH + 'train_data_{}/'.format(datasize)
 	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)
+	indatapath = PATH + 'train_data_pig/'
 	outdatapath = prepareLog(normal_ori_i)
+	ckptpath = PATH + 'train_log/' + path + '/ckpt'
 
-	normal, color, mask = readData(indatapath, datasize, remove_back)
+	# normal, color, mask = readData(indatapath, datasize, remove_back)
+	normal, color, mask = readData1(indatapath, [0, 1, 6, 7, 8, 9], remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]
@@ -197,7 +222,7 @@ def test():
 		logging.info("{}: total average: accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
 			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_sum[0], result_sum[1], result_sum[2]))
 		logging.info("{}: max acc3: idx: {}, accuracy: {:.16f}, \t{:.16f}".format(
-			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), max_idx, max_acc, max_acc3)
+			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), max_idx, max_acc, max_acc3))
 		print("total average: accuracy {}, {}, loss {}".format(result_sum[0], result_sum[1], result_sum[2]))
 
 
