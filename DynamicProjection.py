@@ -242,9 +242,10 @@ class DynamicProjection(object):
 		v = np.array([[i for j in range(512)] for i in range(424)])[mask]
 
 		Z = rawdepth / 1000
-		X = (u - cx) * Z / fx
-		Y = (cy - v) * Z / fy
+		X = (u - self.cx) * Z / self.fx
+		Y = (self.cy - v) * Z / self.fy
 
+		t = self.t
 		denom = t[8] * X + t[9] * Y + t[10] * Z + 1
 		x = (t[0] * X + t[1] * Y + t[2] * Z + t[3]) / denom * 2 - 1
 		y = 1 - (t[4] * X + t[5] * Y + t[6] * Z + t[7]) / denom * 2
@@ -751,15 +752,17 @@ class DynamicProjection(object):
 				# pre_reflect = np.ones([424, 512, 3], np.float32)
 				# pre_normal = None
 
+				
+				normal_ori_i = 0
 				normal = self.depth2normal(rawdepth_filter, mask)
 
 				if normal_ori_i == 0:
 					pre_normal, pre_reflect, pre_img = sess.run(
 						content, 
 						feed_dict = {
-							model.normal: normal
-							model.color: color
-							model.mask: mask
+							model.normal: [normal], 
+							model.color: [color], 
+							model.mask: [mask], 
 							model.lamda: 1.0
 						})
 				else:
@@ -767,9 +770,9 @@ class DynamicProjection(object):
 					pre_reflect, pre_img = sess.run(
 						content, 
 						feed_dict = {
-							model.normal: normal
-							model.color: color
-							model.mask: mask
+							model.normal: [normal], 
+							model.color: [color], 
+							model.mask: [mask], 
 							model.lamda: 1.0
 						})
 
