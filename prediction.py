@@ -53,7 +53,7 @@ def predict():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180606_123609_0'
+	path = '20180602_151901_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	# datasize, datasize_trained = 540, 540
@@ -64,7 +64,7 @@ def predict():
 	# datasize, datasize_trained, npy_list = 540, 540, [452]
 	# datasize, datasize_trained, npy_list = 40, 0, [1]
 	# datasize, datasize_trained, npy_list = 600, 600, [114]
-	datasize, datasize_trained, npy_list = 12, 0, []
+	datasize, datasize_trained, npy_list = 2, 0, []
 
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
 	# indatapath = PATH + 'train_data_{}/'.format(datasize)

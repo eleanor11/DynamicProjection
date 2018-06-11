@@ -24,7 +24,7 @@ SAVEALL = False
 DATAPATH = '../DynamicProjectionData/'
 SUB = 'data/data_body/'
 SUBIN = 'data/data_body_0523/0/'
-SUBOUT = 'data/data_body_0524/'
+SUBOUT = 'data/data_body_0524_pig_0610_3/'
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -403,7 +403,7 @@ class DynamicProjection(object):
 		# vertex_normals = ((vertex_normals + 1) / 2 * 255).astype(np.uint8)
 		# cv.imshow('norm', vertex_normals)
 
-		self.render.draw(vertices, colors, normals, brdfs, self.mvp.T)
+		self.render.draw(vertices, colors, normals, reflects, self.mvp.T)
 
 
 	def getRawData(self):
@@ -592,6 +592,7 @@ class DynamicProjection(object):
 			gid += 1
 		rawdepth_b = self.depthback_origin.reshape([424, 512])
 		np.save(path + 'rawdepth_b_{}.npy'.format(gid), rawdepth_b)
+		# rawdepth_b = np.load(path + 'rawdepth_b_0.npy')
 
 		RED = np.array([0, 0, 255], np.uint8)
 		YELLOW = np.array([0, 255, 255], np.uint8)
@@ -629,6 +630,7 @@ class DynamicProjection(object):
 					self.projectLight(rawdepth, mask)
 
 					cv.imshow('camera', cameraColor)
+					cv.waitKey(1)
 
 					cv.imwrite(path + 'a_image_{}_color.png'.format(idx), rawcolor.reshape([1080, 1920, 4])[:, :, 0: 3])
 					cv.imwrite(path + 'a_image_{}_camera.png'.format(idx), cameraColor)
@@ -684,16 +686,17 @@ class DynamicProjection(object):
 		
 		print('start...')
 
-		
-		# for calibration between camera and kinect
-		R, T = self.calculateRT()
-		base_p_irs = np.array([np.array([i, j, 1.0]) for i in range(424) for j in range(512)], np.float32)
+		if run:
+			# for calibration between camera and kinect
+			R, T = self.calculateRT()
+			base_p_irs = np.array([np.array([i, j, 1.0]) for i in range(424) for j in range(512)], np.float32)
 
-		# init net
-		sess = tf.Session()
-		model, normal_ori_i, content = self.initNet('20180609_234840_0', sess)
-		
-		self.time = time.time()
+			# init net
+			sess = tf.Session()
+			model, normal_ori_i, content = self.initNet('20180609_234840_0', sess)
+			
+			self.time = time.time()
+
 		while run:
 			ch = cv.waitKey(1)
 			if ch == 27:
@@ -750,37 +753,38 @@ class DynamicProjection(object):
 
 				# TODO: BRDF reconstruction
 
-				# normal_ori_i = 1
-				# pre_reflect = np.ones([424, 512, 3], np.float32)
-				# pre_normal = None
+				normal_ori_i = 1
+				pre_reflect = np.ones([424, 512, 3], np.float32)
+				pre_normal = None
 
 
-				normal_ori_i = 0
-				normal = self.depth2normal(rawdepth_filter, mask)
+				# normal_ori_i = 0
+				# normal = self.depth2normal(rawdepth_filter, mask)
 
-				if normal_ori_i == 0:
-					pre_normal, pre_reflect, pre_img = sess.run(
-						content, 
-						feed_dict = {
-							model.normal: [normal], 
-							model.color: [color], 
-							model.mask: [np.expand_dims(mask, 2)], 
-							model.lamda: 1.0
-						})
-				else:
-					pre_normal == None
-					pre_reflect, pre_img = sess.run(
-						content, 
-						feed_dict = {
-							model.normal: [normal], 
-							model.color: [color], 
-							model.mask: [np.expand_dims(mask, 2)], 
-							model.lamda: 1.0
-						})
+				# if normal_ori_i == 0:
+				# 	pre_normal, pre_reflect, pre_img = sess.run(
+				# 		content, 
+				# 		feed_dict = {
+				# 			model.normal: [normal], 
+				# 			model.color: [color], 
+				# 			model.mask: [np.expand_dims(mask, 2)], 
+				# 			model.lamda: 1.0
+				# 		})
+				# else:
+				# 	pre_normal == None
+				# 	pre_reflect, pre_img = sess.run(
+				# 		content, 
+				# 		feed_dict = {
+				# 			model.normal: [normal], 
+				# 			model.color: [color], 
+				# 			model.mask: [np.expand_dims(mask, 2)], 
+				# 			model.lamda: 1.0
+				# 		})
 
 
 			# test render prediction
-				# normal_ori_i = 0
+
+				normal_ori_i = 0
 
 				# # dataset 40 (1)
 				# datetime = '20180531_192936_0'
@@ -796,19 +800,19 @@ class DynamicProjection(object):
 				# pre_reflect = np.load(path + 'prereflect1.npy')
 				# pre_img = np.load(path + 'preimg1.npy')
 
-				# # dataset pig (1)
-				# datetime = '20180607_092316_0'
-				# path = DATAPATH + 'prediction/' + datetime + '/data/'
-				# outpath = DATAPATH + 'render_prediction/' + datetime
-				# if not os.path.isdir(outpath):
-				# 	os.mkdir(outpath)
+				# dataset pig (1)
+				datetime = '20180610_151014_0'
+				path = DATAPATH + 'prediction/' + datetime + '/data/'
+				outpath = DATAPATH + 'render_prediction/' + datetime
+				if not os.path.isdir(outpath):
+					os.mkdir(outpath)
 
-				# rawdepth_filter = np.load(DATAPATH + 'train_data_pig/rawdepth_filter1.npy')
-				# mask = np.load(DATAPATH + 'train_data_pig/mask1.npy')
+				rawdepth_filter = np.load(DATAPATH + 'train_data_pig/rawdepth_filter1.npy')
+				mask = np.load(DATAPATH + 'train_data_pig/mask1.npy')
 				# pre_normal = np.load(DATAPATH + 'train_data_pig/normal1.npy')
-				# # pre_normal = np.load(path + 'prenormal1.npy')
-				# pre_reflect = np.load(path + 'prereflect1.npy')
-				# pre_img = np.load(path + 'preimg1.npy')
+				pre_normal = np.load(path + 'prenormal1.npy')
+				pre_reflect = np.load(path + 'prereflect1.npy')
+				pre_img = np.load(path + 'preimg1.npy')
 
 				# # dataset 540 (452)
 				# datetime = '20180530_193148_0'
@@ -824,7 +828,11 @@ class DynamicProjection(object):
 				# pre_reflect = np.load(path + 'prereflect452.npy')
 				# pre_img = np.load(path + 'preimg452.npy')
 
-				# pre_normal[..., 0] = 0 - pre_normal[..., 0]
+				pre_normal[..., 0] = 0 - pre_normal[..., 0]
+
+				pre_img = np.expand_dims(pre_img, 0)
+				pre_normal = np.expand_dims(pre_normal, 0)
+				pre_reflect = np.expand_dims(pre_reflect, 0)
 
 			# test render prediction end
 
@@ -838,8 +846,8 @@ class DynamicProjection(object):
 
 				# render content
 				corres = np.zeros([424, 512, 3], np.uint8)
-				# corres[mask] = np.array([255, 255, 255])
-				corres[mask] = pre_img[0][mask]
+				corres[mask] = np.array([255, 255, 255])
+				# corres[mask] = pre_img[0][mask]
 				# cv.imshow('corres', corres)
 
 

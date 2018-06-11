@@ -11,9 +11,9 @@ PROJECTION_MODE = False
 # 2: shader2(reflect * normal)
 # SHADER = 0
 SHADER = 1
-SHADER = 2
+# SHADER = 2
 lightPosition = np.array([0.0, 0.0, 1.0])
-# lightPosition = np.array([1.0, 0.0, 0.0])
+lightPosition = np.array([1.0, 0.0, 0.0])
 # lightPosition = np.array([1.0, 2.0, 0.0])
 
 def LoadProgram(shaderPathList):
@@ -84,7 +84,7 @@ class GLRenderer(object):
 		if SHADER > 0:
 			self.normalBuf = glGenBuffers(1)
 		if SHADER > 1:
-			self.brdfBuf = glGenBuffers(1)
+			self.reflectBuf = glGenBuffers(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
 		self.toTexture = toTexture
@@ -137,7 +137,7 @@ class GLRenderer(object):
 		# glActiveTexture(GL_TEXTURE1)
 		# glEnable(GL_TEXTURE_2D)
 
-	def draw(self, vertices, colors, normals, brdfs, mvp):
+	def draw(self, vertices, colors, normals, reflects, mvp):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program)
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
@@ -193,11 +193,11 @@ class GLRenderer(object):
 		# SHADER 2
 		if SHADER > 1:
 			glEnableVertexAttribArray(3)
-			glBindBuffer(GL_ARRAY_BUFFER, self.brdfBuf)
-			glBufferData(GL_ARRAY_BUFFER, brdfs, GL_STATIC_DRAW)
+			glBindBuffer(GL_ARRAY_BUFFER, self.reflectBuf)
+			glBufferData(GL_ARRAY_BUFFER, reflects, GL_STATIC_DRAW)
 			glVertexAttribPointer(
 				3, 
-				brdfs.shape[1],
+				reflects.shape[1],
 				GL_FLOAT, 
 				GL_FALSE, 
 				0, 
