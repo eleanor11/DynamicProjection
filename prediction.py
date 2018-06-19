@@ -53,7 +53,7 @@ def predict():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180602_151901_0'
+	path = '20180613_010338_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	# datasize, datasize_trained = 540, 540

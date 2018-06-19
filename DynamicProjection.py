@@ -751,7 +751,7 @@ class DynamicProjection(object):
 				# TODO: segmentation
 
 
-				# TODO: BRDF reconstruction
+			# BRDF reconstruction
 
 				normal_ori_i = 1
 				pre_reflect = np.ones([424, 512, 3], np.float32)
@@ -801,7 +801,7 @@ class DynamicProjection(object):
 				# pre_img = np.load(path + 'preimg1.npy')
 
 				# dataset pig (1)
-				datetime = '20180610_151014_0'
+				datetime = '20180616_152112_0'
 				path = DATAPATH + 'prediction/' + datetime + '/data/'
 				outpath = DATAPATH + 'render_prediction/' + datetime
 				if not os.path.isdir(outpath):

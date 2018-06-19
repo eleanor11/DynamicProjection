@@ -13,7 +13,7 @@ PROJECTION_MODE = False
 SHADER = 1
 # SHADER = 2
 lightPosition = np.array([0.0, 0.0, 1.0])
-lightPosition = np.array([1.0, 0.0, 0.0])
+# lightPosition = np.array([1.0, 0.0, 0.0])
 # lightPosition = np.array([1.0, 2.0, 0.0])
 
 def LoadProgram(shaderPathList):
@@ -85,33 +85,11 @@ class GLRenderer(object):
 			self.normalBuf = glGenBuffers(1)
 		if SHADER > 1:
 			self.reflectBuf = glGenBuffers(1)
+			self.texture = glGenTextures(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
 		self.toTexture = toTexture
-		if toTexture:
-			self.texColor = glGenTextures(1)
-			glBindTexture(GL_TEXTURE_2D, self.texColor)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.width, self.height, 0, GL_RGB, GL_UNSIGNED_BYTE, None)
-
-			self.texDepth = glGenTextures(1)
-			glBindTexture(GL_TEXTURE_2D, self.texDepth)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-			glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL)
-			glTexImage2D(GL_TEXTURE_2D, GL_DEPTH_COMPONENT, self.width, self.height, 0, GL_DRPTH_COMPONENT, GL_FLOAT, None)
-
-			self.frameBuf = glGenFramebuffers(1)
-			glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuf)
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.texColor, 0)
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.texDepth, 0)
+  
 
 		if SHADER == 0:
 			shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
@@ -129,6 +107,7 @@ class GLRenderer(object):
 			self.lightColor = glGetUniformLocation(self.program, 'lightColor')
 		elif SHADER == 2:
 			self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
+			self.lightColor = glGetUniformLocation(self.program, 'lightColor')
 
 
 		# glEnableVertexAttribArray(2)
@@ -149,8 +128,11 @@ class GLRenderer(object):
 			glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
 			glUniform3fv(self.lightPosition, 1, lightPosition)
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
+			glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
 		elif SHADER == 2:
 			glUniform3fv(self.lightPosition, 1, lightPosition)
+			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
+			glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)

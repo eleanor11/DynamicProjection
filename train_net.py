@@ -120,27 +120,29 @@ def train():
 	print('train')
 
 	start_iter, datetime = 0, ''
-	# start_iter, datetime = 14000 + 1, '20180528_183506_0'
+	#start_iter, datetime = 2000 + 1, '20180611_181307_0'
 
 
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
 	data_size = 500
+	# data_size = 25
 	batch_size = 5
 
 	# lp_iter = 2000
 	# lp_iter = 0
 	lp_iter = 20000
 	
-	# lamda_default = 1
-	lamda_default = 10
+	lamda_default = 1
+	# lamda_default = 10
 
 	# indatapath = PATH + 'train_data_{}/'.format(data_size)
 	indatapath = PATH + 'train_data_{}_1/'.format(data_size)
+	# indatapath = PATH + 'train_data_500_1/'
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
-	remove_back = True
+	remove_back = False
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
 		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
@@ -154,19 +156,21 @@ def train():
 	logging.info('lp_iter: {}'.format(lp_iter))
 	logging.info('remove_back: {}'.format(remove_back))
 	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
-	logging.info('batch_size: {}, learning_rate: {}, lamda: {}'.format(batch_size, model.learning_rate, lamda_default))
+	logging.info('batch_size: {}, lamda: {}'.format(batch_size, lamda_default))
 	logging.info('lightdir: {}'.format(lightdir))
 
 	end = size - batch_size
 
 	with tf.Session() as sess:
 
-		train_step, accuracy, accuracy_3, loss_, normal_, reflect_, I_, lr_, lp_ = model.net()
+		train_step_adam, train_step_gd, accuracy, accuracy_3, loss_, normal_, reflect_, I_, lr_, lp_ = model.net()
 
 		if start_iter == 0:
 			sess.run(tf.global_variables_initializer())
 		else:
 			tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
+
+		learning_rate = 1e-2
 
 		results = np.empty([0, 7], np.float32)
 
@@ -174,10 +178,12 @@ def train():
 			if i % 20 == 0:
 				print(i)
 			idx = i % end
+			# idx = 0
 			if i < lp_iter:
 				lamda = lamda_default
 			else:
 				lamda = 0
+
 
 			if i % 100 == 0 or i == 19999:
 
@@ -189,44 +195,21 @@ def train():
 						model.color: train_color[idx: idx + batch_size], 
 						model.mask: train_mask[idx: idx + batch_size], 
 						model.lamda: lamda})
-				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
+				logging.info("{}: train step: {}, \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}, \tlearning rate: {}".format(
 					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
 					i, 
 					train_accuracy, 
 					train_accuracy_3, 
 					train_loss, 
 					train_lr, 
-					train_lp))
+					train_lp,
+					learning_rate))
 
 				if i % 300 == 0 or i == 19999:
 					train_ii = (train_ii * 255).astype(np.uint8)
 					train_ii[train_ii > 255] = 255
 					for j in range(batch_size):
 						cv.imwrite(outdatapath + '/preimg{}_{}.png'.format(i, j), train_ii[j])
-
-				if i == 19999:
-					train_idx = 0
-					result_cnt = 0
-					result_sum = np.zeros((5), np.float32)
-					while train_idx + batch_size <= train_size:
-						result = sess.run(
-							[accuracy, accuracy_3, loss_, lr_, lp_], 
-							feed_dict = {
-								model.normal: train_normal[train_idx: train_idx + batch_size], 
-								model.color: train_color[train_idx: train_idx + batch_size], 
-								model.mask: train_mask[train_idx: train_idx + batch_size], 
-								model.lamda: lamda})
-						result_cnt += 1
-						result_sum += np.array(result)
-						train_idx += batch_size
-					[train_accuracy_total, train_accuracy_3_total, train_loss_total, train_lp_total, train_lr_total] = result_sum / result_cnt
-					logging.info("{}: train step (total): \ttraining accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
-						time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
-						train_accuracy_total, 
-						train_accuracy_3_total, 
-						train_loss_total, 
-						train_lr_total, 
-						train_lp_total))
 
 				# test accuracy
 				test_idx = 0
@@ -277,14 +260,39 @@ def train():
 					np.array([[i, train_accuracy, train_accuracy_3, train_loss, test_accuracy, test_accuracy_3, test_loss]]), 
 					axis = 0)
 
-				
-				
+		# # adaptive adam
+		# 	if i < 100:
+		# 		learning_rate = 1e-2
+		# 	elif i < 500:
+		# 		learning_rate = 1e-3
+		# 	elif i < 2000:
+		# 		learning_rate = 1e-4	
+		# 	else:
+		# 		learning_rate = 3e-5
+		# 	sess.run(train_step_adam, feed_dict = {
+		# 		model.normal: train_normal[idx: idx + batch_size], 
+		# 		model.color: train_color[idx: idx + batch_size], 
+		# 		model.mask: train_mask[idx: idx + batch_size],
+		# 		model.lamda: lamda, 
+		# 		model.learning_rate: learning_rate})
 
-			sess.run(train_step, feed_dict = {
-				model.normal: train_normal[idx: idx + batch_size], 
-				model.color: train_color[idx: idx + batch_size], 
-				model.mask: train_mask[idx: idx + batch_size],
-				model.lamda: lamda})
+		# # adaptive adam + gd
+			if i < 500:
+				learning_rate = 1e-2
+				sess.run(train_step_adam, feed_dict = {
+					model.normal: train_normal[idx: idx + batch_size], 
+					model.color: train_color[idx: idx + batch_size], 
+					model.mask: train_mask[idx: idx + batch_size],
+					model.lamda: lamda, 
+					model.learning_rate: learning_rate})
+			else:
+				learning_rate = 1e-2
+				sess.run(train_step_gd, feed_dict = {
+					model.normal: train_normal[idx: idx + batch_size], 
+					model.color: train_color[idx: idx + batch_size], 
+					model.mask: train_mask[idx: idx + batch_size],
+					model.lamda: lamda, 
+					model.learning_rate: learning_rate})
 
 			if i % 1000 == 0 or i == 19999:
 				tf.train.Saver().save(sess, ckptpath + '/model_latest')

@@ -91,25 +91,25 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180609_195324_0'
+	path = '20180613_093310_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	# datasize, datasize_trained = 600, 600
-	# datasize, datasize_trained = 500, 500
+	datasize, datasize_trained = 500, 500
 	# datasize, datasize_trained = 40, 0
-	datasize, datasize_trained = 6, 0
+	# datasize, datasize_trained = 6, 0
 
-	remove_back = True
-	# remove_back = False
+	# remove_back = True
+	remove_back = False
 
 	# indatapath = PATH + 'train_data_{}/'.format(datasize)
-	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)
-	indatapath = PATH + 'train_data_pig/'
+	indatapath = PATH + 'train_data_{}_1/'.format(datasize)
+	# indatapath = PATH + 'train_data_pig/1/'
 	outdatapath = prepareLog(normal_ori_i)
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
 
-	# normal, color, mask = readData(indatapath, datasize, remove_back)
-	normal, color, mask = readData1(indatapath, [0, 1, 6, 7, 8, 9], remove_back)
+	normal, color, mask = readData(indatapath, datasize, remove_back)
+	# normal, color, mask = readData1(indatapath, [0, 1, 6, 7, 8, 9], remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]

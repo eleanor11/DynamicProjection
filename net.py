@@ -48,7 +48,6 @@ class DPNet:
 		self.normal_ori = normal_ori
 		self.lightdir = tf.constant(lightdir, tf.float32)
 		self.oc = 16
-		self.learning_rate = 1e-2
 
 
 	def PSNet(self, x):
@@ -129,7 +128,8 @@ class DPNet:
 		self.color = tf.placeholder(tf.float32, [self.size, self.height, self.width, 3], name = 'color')
 		self.mask = tf.placeholder(tf.float32, [self.size, self.height, self.width, 1], name = 'mask')
 		self.lamda = tf.placeholder(tf.float32, name = 'lamda')
-		
+		self.learning_rate = tf.placeholder(tf.float32, name = 'learning_rate')
+
 		viewdir = tf.constant([0.0, 0.0, 1.0])
 
 		mat_size = self.size * self.height * self.width
@@ -159,7 +159,8 @@ class DPNet:
 		loss_res = lr / mask_sum
 		loss_prior = lp / mask_sum
 		loss = loss_res + self.lamda * loss_prior
-		train_step = tf.train.AdamOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
+		train_step_adam = tf.train.AdamOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
+		train_step_gd = tf.train.GradientDescentOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
 
 		accuracy = tf.reduce_sum(tf.cast(tf.equal(self.color, I_), tf.float32) * self.mask) / mask_sum
 		delta = 3.0 / 256.0
@@ -170,7 +171,7 @@ class DPNet:
 		Im_ = I_ * self.mask
 
 		if mode == 'training':
-			return train_step, accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
+			return train_step_adam, train_step_gd, accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
 		elif mode == 'testing':
 			return accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
 		elif mode == 'predicting':
