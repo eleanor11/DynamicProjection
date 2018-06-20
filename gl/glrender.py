@@ -81,33 +81,37 @@ class GLRenderer(object):
 		glBindVertexArray(self.vertexArr)
 		self.vertexBuf = glGenBuffers(1)
 		self.colorBuf = glGenBuffers(1)
-		if SHADER > 0:
+
+		self.toTexture = toTexture
+		self.shader = SHADER
+
+		if self.shader > 0:
 			self.normalBuf = glGenBuffers(1)
-		if SHADER > 1:
+		if self.shader > 1:
 			self.reflectBuf = glGenBuffers(1)
 			self.texture = glGenTextures(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
-		self.toTexture = toTexture
-  
 
-		if SHADER == 0:
-			shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
-		elif SHADER == 1:
-			shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
-		elif SHADER == 2:
-			shaderPathList = [os.path.join('gl', sh) for sh in ['test_brdf.vs', 'test_brdf.fs']]
-		self.program = LoadProgram(shaderPathList)
-		self.mvpMatrix = glGetUniformLocation(self.program, 'MVP')
+		self.program = []
+		shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
+		self.program.append(LoadProgram(shaderPathList))
+		shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
+		self.program.append(LoadProgram(shaderPathList))
+		shaderPathList = [os.path.join('gl', sh) for sh in ['test_brdf.vs', 'test_brdf.fs']]
+		self.program.append(LoadProgram(shaderPathList))
 
-		if SHADER == 1:
-			self.kd = glGetUniformLocation(self.program, 'kd')
-			self.ld = glGetUniformLocation(self.program, 'ld')
-			self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
-			self.lightColor = glGetUniformLocation(self.program, 'lightColor')
-		elif SHADER == 2:
-			self.lightPosition = glGetUniformLocation(self.program, 'lightPosition')
-			self.lightColor = glGetUniformLocation(self.program, 'lightColor')
+		for i in range(3):
+			self.mvpMatrix = glGetUniformLocation(self.program[i], 'MVP')
+
+		if self.shader == 1:
+			self.kd = glGetUniformLocation(self.program[1], 'kd')
+			self.ld = glGetUniformLocation(self.program[1], 'ld')
+			self.lightPosition = glGetUniformLocation(self.program[1], 'lightPosition')
+			self.lightColor = glGetUniformLocation(self.program[1], 'lightColor')
+		elif self.shader == 2:
+			self.lightPosition = glGetUniformLocation(self.program[2], 'lightPosition')
+			self.lightColor = glGetUniformLocation(self.program[2], 'lightColor')
 
 
 		# glEnableVertexAttribArray(2)
@@ -116,23 +120,22 @@ class GLRenderer(object):
 		# glActiveTexture(GL_TEXTURE1)
 		# glEnable(GL_TEXTURE_2D)
 
-	def draw(self, vertices, colors, normals, reflects, mvp):
+	def draw(self, vertices, colors, normals, reflects, mvp, shader = SHADER):
+		self.shader = shader
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-		glUseProgram(self.program)
+		glUseProgram(self.program[self.shader])
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
 
-		# lightPosition = np.array([0.0, 0.0, 1.0])
-
-		if SHADER == 1:
+		if self.shader == 1:
 			glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
 			glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
 			glUniform3fv(self.lightPosition, 1, lightPosition)
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
-		elif SHADER == 2:
+			# glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
+		elif self.shader == 2:
 			glUniform3fv(self.lightPosition, 1, lightPosition)
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
+			# glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)
@@ -159,7 +162,7 @@ class GLRenderer(object):
 		)
 
 		# SHADER 1, 2
-		if SHADER > 0:
+		if self.shader > 0:
 			glEnableVertexAttribArray(2)
 			glBindBuffer(GL_ARRAY_BUFFER, self.normalBuf)
 			glBufferData(GL_ARRAY_BUFFER, normals, GL_STATIC_DRAW)
@@ -173,7 +176,7 @@ class GLRenderer(object):
 			)
 
 		# SHADER 2
-		if SHADER > 1:
+		if self.shader > 1:
 			glEnableVertexAttribArray(3)
 			glBindBuffer(GL_ARRAY_BUFFER, self.reflectBuf)
 			glBufferData(GL_ARRAY_BUFFER, reflects, GL_STATIC_DRAW)
@@ -193,9 +196,9 @@ class GLRenderer(object):
 
 		glDisableVertexAttribArray(0)
 		glDisableVertexAttribArray(1)
-		if SHADER > 0:
+		if self.shader > 0:
 			glDisableVertexAttribArray(2)
-		if SHADER > 1:
+		if self.shader > 1:
 			glDisableVertexAttribArray(3)
 		glUseProgram(0)
 		glutSwapBuffers()
