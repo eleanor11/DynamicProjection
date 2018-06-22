@@ -20,7 +20,7 @@ MODE = 2
 
 SAVE = False
 SAVEALL = False
-REALTIME = True
+REALTIME = False
 
 DATAPATH = '../DynamicProjectionData/'
 SUB = 'data/data_body/'
@@ -65,7 +65,8 @@ class DynamicProjection(object):
 		self.pwidth = 1024
 		self.pheight = 768
 
-		self.render = GLRenderer(b'projection', (self.pwidth, self.pheight))
+		tex = cv.imread(DATAPATH + 'texture3.png')
+		self.render = GLRenderer(b'projection', (self.pwidth, self.pheight), tex)
 
 		self.mvp = glm.ortho(-1, 1, -1, 1, -1, 1000)
 
@@ -664,6 +665,8 @@ class DynamicProjection(object):
 		depth_filter = self.depth2gray(rawdepth_filter, False)
 		rawdepth_filter = rawdepth_filter.reshape(rawdepth.shape)
 
+		return rawdepth_filter
+
 
 	def initNet(self, path, sess):
 		normal_ori_i = int(path[len(path) - 1])
@@ -755,81 +758,85 @@ class DynamicProjection(object):
 					# pre_reflect = np.ones([424, 512, 3], np.float32)
 					# pre_normal = None
 
-					# normal_ori_i = 0
-					# normal = self.depth2normal(rawdepth_filter, mask)
+					normal_ori_i = 0
+					normal = self.depth2normal(rawdepth_filter, mask)
 
-					# if normal_ori_i == 0:
-					# 	pre_normal, pre_reflect, pre_img = sess.run(
-					# 		content, 
-					# 		feed_dict = {
-					# 			model.normal: [normal], 
-					# 			model.color: [color], 
-					# 			model.mask: [np.expand_dims(mask, 2)], 
-					# 			model.lamda: 1.0
-					# 		})
-					# else:
-					# 	pre_normal == None
-					# 	pre_reflect, pre_img = sess.run(
-					# 		content, 
-					# 		feed_dict = {
-					# 			model.normal: [normal], 
-					# 			model.color: [color], 
-					# 			model.mask: [np.expand_dims(mask, 2)], 
-					# 			model.lamda: 1.0
-					# 		})
+					if normal_ori_i == 0:
+						pre_normal, pre_reflect, pre_img = sess.run(
+							content, 
+							feed_dict = {
+								model.normal: [normal], 
+								model.color: [color], 
+								model.mask: [np.expand_dims(mask, 2)], 
+								model.lamda: 1.0
+							})
+						pre_normal[..., 0] = 0 - pre_normal[..., 0]
+
+						# cv.imshow('pre_img', (pre_img[0] * 255).astype(np.uint8))
+						# cv.imshow('pre_normal', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+					else:
+						pre_normal == None
+						pre_reflect, pre_img = sess.run(
+							content, 
+							feed_dict = {
+								model.normal: [normal], 
+								model.color: [color], 
+								model.mask: [np.expand_dims(mask, 2)], 
+								model.lamda: 1.0
+							})
 
 
 				# test render prediction
 
-					normal_ori_i = 0
+					# normal_ori_i = 0
 
-					# # dataset 40 (1)
-					# datetime = '20180531_192936_0'
+					# # # dataset 40 (1)
+					# # datetime = '20180531_192936_0'
+					# # path = DATAPATH + 'prediction/' + datetime + '/data/'
+					# # outpath = DATAPATH + 'render_prediction/' + datetime
+					# # if not os.path.isdir(outpath):
+					# # 	os.mkdir(outpath)
+
+					# # rawdepth_filter = np.load(DATAPATH + 'train_data_40_rawdepth/rawdepth_filter1.npy')
+					# # mask = np.load(DATAPATH + 'train_data_40/mask1.npy')
+					# # pre_normal = np.load(DATAPATH + 'train_data_40/normal1.npy')
+					# # pre_normal = np.load(path + 'prenormal1.npy')
+					# # pre_reflect = np.load(path + 'prereflect1.npy')
+					# # pre_img = np.load(path + 'preimg1.npy')
+
+					# # dataset pig (1)
+					# datetime = '20180616_152112_0'
 					# path = DATAPATH + 'prediction/' + datetime + '/data/'
 					# outpath = DATAPATH + 'render_prediction/' + datetime
 					# if not os.path.isdir(outpath):
 					# 	os.mkdir(outpath)
 
-					# rawdepth_filter = np.load(DATAPATH + 'train_data_40_rawdepth/rawdepth_filter1.npy')
-					# mask = np.load(DATAPATH + 'train_data_40/mask1.npy')
-					# pre_normal = np.load(DATAPATH + 'train_data_40/normal1.npy')
+					# rawdepth_filter = np.load(DATAPATH + 'train_data_pig/rawdepth_filter1.npy')
+					# mask = np.load(DATAPATH + 'train_data_pig/mask1.npy')
+					# # pre_normal = np.load(DATAPATH + 'train_data_pig/normal1.npy')
 					# pre_normal = np.load(path + 'prenormal1.npy')
 					# pre_reflect = np.load(path + 'prereflect1.npy')
 					# pre_img = np.load(path + 'preimg1.npy')
 
-					# dataset pig (1)
-					datetime = '20180616_152112_0'
-					path = DATAPATH + 'prediction/' + datetime + '/data/'
-					outpath = DATAPATH + 'render_prediction/' + datetime
-					if not os.path.isdir(outpath):
-						os.mkdir(outpath)
+					# # # dataset 540 (452)
+					# # datetime = '20180530_193148_0'
+					# # path = DATAPATH + 'prediction/' + datetime + '/data/'
+					# # outpath = DATAPATH + 'render_prediction/' + datetime
+					# # if not os.path.isdir(outpath):
+					# # 	os.mkdir(outpath)
 
-					rawdepth_filter = np.load(DATAPATH + 'train_data_pig/rawdepth_filter1.npy')
-					mask = np.load(DATAPATH + 'train_data_pig/mask1.npy')
-					# pre_normal = np.load(DATAPATH + 'train_data_pig/normal1.npy')
-					pre_normal = np.load(path + 'prenormal1.npy')
-					pre_reflect = np.load(path + 'prereflect1.npy')
-					pre_img = np.load(path + 'preimg1.npy')
+					# # rawdepth_filter = np.load(DATAPATH + 'train_data_540_rawdepth/rawdepth_filter452.npy')
+					# # mask = np.load(DATAPATH + 'train_data_540/mask452.npy')
+					# # pre_normal = np.load(DATAPATH + 'train_data_540/normal452.npy')
+					# # # pre_normal = np.load(path + 'prenormal452.npy')
+					# # pre_reflect = np.load(path + 'prereflect452.npy')
+					# # pre_img = np.load(path + 'preimg452.npy')
 
-					# # dataset 540 (452)
-					# datetime = '20180530_193148_0'
-					# path = DATAPATH + 'prediction/' + datetime + '/data/'
-					# outpath = DATAPATH + 'render_prediction/' + datetime
-					# if not os.path.isdir(outpath):
-					# 	os.mkdir(outpath)
+					# pre_normal[..., 0] = 0 - pre_normal[..., 0]
 
-					# rawdepth_filter = np.load(DATAPATH + 'train_data_540_rawdepth/rawdepth_filter452.npy')
-					# mask = np.load(DATAPATH + 'train_data_540/mask452.npy')
-					# pre_normal = np.load(DATAPATH + 'train_data_540/normal452.npy')
-					# # pre_normal = np.load(path + 'prenormal452.npy')
-					# pre_reflect = np.load(path + 'prereflect452.npy')
-					# pre_img = np.load(path + 'preimg452.npy')
-
-					pre_normal[..., 0] = 0 - pre_normal[..., 0]
-
-					pre_img = np.expand_dims(pre_img, 0)
-					pre_normal = np.expand_dims(pre_normal, 0)
-					pre_reflect = np.expand_dims(pre_reflect, 0)
+					# pre_img = np.expand_dims(pre_img, 0)
+					# pre_normal = np.expand_dims(pre_normal, 0)
+					# pre_reflect = np.expand_dims(pre_reflect, 0)
 
 				# test render prediction end
 
@@ -846,7 +853,9 @@ class DynamicProjection(object):
 					# render content
 					corres = np.zeros([424, 512, 3], np.uint8)
 					corres[mask] = np.array([255, 255, 255])
-					# corres[mask] = pre_img[0][mask]
+					texture = cv.imread(DATAPATH + 'texture2.png')
+					# corres[mask] = texture[mask]
+					# corres[mask] = pre_img[0][mask] * 255
 					# cv.imshow('corres', corres)
 					if SAVE:
 						np.save(DATAPATH + SUB + 'corres.npy', corres)
@@ -888,6 +897,8 @@ class DynamicProjection(object):
 						cv.imwrite(path + '/color.png', color)
 						cv.imwrite(path + '/cameraColor.png', cameraColor)
 						cv.imwrite(DATAPATH + SUBOUT + 'cameraColor{}.png'.format(self.index), cameraColor)
+						cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+						cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
 
 						np.save(path + '/depthback_origin.npy', self.depthback_origin)
 						np.save(path + '/colorback_origin.npy', self.colorback_origin)

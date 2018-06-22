@@ -18,8 +18,7 @@ void main() {
 	vec3 lightDir = normalize(lightPosition);
 
 	float NdotL = max(dot(normal, lightDir), 0.0);
-	vColor = vertexReflect * NdotL * lightColor;
-
+	vColor = vertexReflect * NdotL * lightColor * vertexColor;
 }
 
 

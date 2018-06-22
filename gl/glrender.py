@@ -2,6 +2,7 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
 import numpy as np
+import cv2 as cv
 import PIL.Image as im
 
 PROJECTION_MODE = False
@@ -10,8 +11,8 @@ PROJECTION_MODE = False
 # 1: shader1(lambert) 	
 # 2: shader2(reflect * normal)
 # SHADER = 0
-SHADER = 1
-# SHADER = 2
+# SHADER = 1
+SHADER = 2
 lightPosition = np.array([0.0, 0.0, 1.0])
 # lightPosition = np.array([1.0, 0.0, 0.0])
 # lightPosition = np.array([1.0, 2.0, 0.0])
@@ -45,23 +46,23 @@ def LoadProgram(shaderPathList):
 		glDeleteShader(shader)
 	return program
 
-def LoadTexture(fileName):
+def LoadTexture(image):
 
-	image = im.open(fileName)
-
-	w, h = image.size[0], image.size[1]
-	data = image.tobytes("raw", "RGBX", 0, -1)
+	[w, h] = image.shape[0:2]
 
 	texture = glGenTextures(1)
+	glActiveTexture(GL_TEXTURE0)
 	glBindTexture(GL_TEXTURE_2D, texture)
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, w, h, 0, GL_BGR, GL_UNSIGNED_BYTE, image)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
 
 	return texture
 
 class GLRenderer(object):
-	def __init__(self, name, size, toTexture = False):
+	def __init__(self, name, size, tex_image):
 		self.width, self.height = size
 
 		glutInit()
@@ -82,14 +83,13 @@ class GLRenderer(object):
 		self.vertexBuf = glGenBuffers(1)
 		self.colorBuf = glGenBuffers(1)
 
-		self.toTexture = toTexture
 		self.shader = SHADER
 
 		if self.shader > 0:
 			self.normalBuf = glGenBuffers(1)
 		if self.shader > 1:
 			self.reflectBuf = glGenBuffers(1)
-			self.texture = glGenTextures(1)
+			self.texture = LoadTexture(tex_image)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
 
@@ -109,16 +109,14 @@ class GLRenderer(object):
 			self.ld = glGetUniformLocation(self.program[1], 'ld')
 			self.lightPosition = glGetUniformLocation(self.program[1], 'lightPosition')
 			self.lightColor = glGetUniformLocation(self.program[1], 'lightColor')
+			# self.texture = glGetUniformLocation(self.program[1], 'myTexture')
 		elif self.shader == 2:
 			self.lightPosition = glGetUniformLocation(self.program[2], 'lightPosition')
 			self.lightColor = glGetUniformLocation(self.program[2], 'lightColor')
+			self.texture = glGetUniformLocation(self.program[2], 'myTexture')
 
 
-		# glEnableVertexAttribArray(2)
-		# self.texture = LoadTexture("data/image.bmp")
-		# glUniform1i(glGetUniformLocation(self.program, 'Texture'), self.texture)
-		# glActiveTexture(GL_TEXTURE1)
-		# glEnable(GL_TEXTURE_2D)
+
 
 	def draw(self, vertices, colors, normals, reflects, mvp, shader = SHADER):
 		self.shader = shader
@@ -132,10 +130,12 @@ class GLRenderer(object):
 			glUniform3fv(self.lightPosition, 1, lightPosition)
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
 			# glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
+			# glUniform1i(self.texture, 0)
 		elif self.shader == 2:
 			glUniform3fv(self.lightPosition, 1, lightPosition)
 			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
 			# glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
+			glUniform1i(self.texture, 0)
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)
