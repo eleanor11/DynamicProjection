@@ -91,22 +91,27 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180613_093310_0'
+	path = '20180624_210335_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
+	# datasize, datasize_trained = 500, 500
 	# datasize, datasize_trained = 600, 600
-	datasize, datasize_trained = 500, 500
+	datasize, datasize_trained = 660, 660
 	# datasize, datasize_trained = 40, 0
 	# datasize, datasize_trained = 6, 0
+
+	# need_acc_normal = True
+	need_acc_normal = False
 
 	# remove_back = True
 	remove_back = False
 
-	# indatapath = PATH + 'train_data_{}/'.format(datasize)
-	indatapath = PATH + 'train_data_{}_1/'.format(datasize)
+	indatapath = PATH + 'train_data_{}/'.format(datasize)
+	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)
 	# indatapath = PATH + 'train_data_pig/1/'
 	outdatapath = prepareLog(normal_ori_i)
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
+	# ckptpath = PATH + 'train_log/' + path + '/ckpt/10000'
 
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	# normal, color, mask = readData1(indatapath, [0, 1, 6, 7, 8, 9], remove_back)
@@ -126,52 +131,73 @@ def test():
 
 	with tf.Session() as sess:
 
-		accuracy_, accuracy_3_, loss_, normal_, reflect_, I_, lr_, lp_ = model.net('testing')
+		accuracy_, accuracy_3_, accuracy_5_, accuracy_normal_, loss_, normal_, reflect_, I_, lr_, lp_ = model.net('testing')
 
 		# restore model
 		tf.train.Saver().restore(sess, tf.train.latest_checkpoint(ckptpath))
 		
-		result_sum = np.array([0.0, 0.0, 0.0])
-		result_old = np.array([0.0, 0.0, 0.0])
-		result_new = np.array([0.0, 0.0, 0.0])
+		result_sum = np.zeros([6], np.float32)
+		result_old = np.zeros([6], np.float32)
+		result_new = np.zeros([6], np.float32)
 
-		max_idx, max_acc, max_acc3 = -1, 0, 0
+		max_acc3 = [-1, 0, 0, 0]
+		max_acc5 = [-1, 0, 0, 0]
+
+		min_loss = [-1, 10, 1, 1]
+		min_lp = [-1, 10, 1, 1]
 
 		for i in range(datasize):
 			if normal_ori_i == 0:
-				accuracy, accuracy_3, loss, lr, lp, pre_normal, reflect, img = sess.run(
-					[accuracy_, accuracy_3_, loss_, lr_, lp_, normal_, reflect_, I_], 
+				accuracy, accuracy_3, accuracy_5, accuracy_normal, loss, lr, lp, pre_normal, reflect, img = sess.run(
+					[accuracy_, accuracy_3_, accuracy_5_, accuracy_normal_, loss_, lr_, lp_, normal_, reflect_, I_], 
 					feed_dict = {
 						model.normal: normal[i: i + batch_size], 
 						model.color: color[i: i + batch_size], 
 						model.mask: mask[i: i + batch_size], 
 						model.lamda: 1.0}) 
 			else:
-				accuracy, accuracy_3, loss, lr, lp, reflect, img = sess.run(
-					[accuracy_, accuracy_3_, loss_, lr_, lp_, reflect_, I_], 
+				accuracy, accuracy_3, accuracy_5, loss, lr, lp, reflect, img = sess.run(
+					[accuracy_, accuracy_3_, accuracy_5_, loss_, lr_, lp_, reflect_, I_], 
 					feed_dict = {
 						model.normal: normal[i: i + batch_size], 
 						model.color: color[i: i + batch_size], 
 						model.mask: mask[i: i + batch_size], 
 						model.lamda: 1.0}) 
+				accuracy_normal = 1
 
-			if accuracy_3 > max_acc3:
-				max_acc = accuracy
-				max_acc3 = accuracy_3
-				max_idx = i
+			if accuracy_3 > max_acc3[2]:
+				max_acc3 = [i, accuracy, accuracy_3, accuracy_5]
+			if accuracy_5 > max_acc5[3]:
+				max_acc5 = [i, accuracy, accuracy_3, accuracy_5]
 
-			result_sum += np.array([accuracy, accuracy_3, loss])
+			if loss < min_loss[1]:
+				min_loss = [i, loss, lr, lp]
+			if lp < min_lp[3]:
+				min_lp = [i, loss, lr, lp]
+
+			result_sum += np.array([accuracy, accuracy_3, accuracy_5, accuracy_normal, loss, lp])
 			if i < datasize_trained:
-				result_old += np.array([accuracy, accuracy_3, loss])
+				result_old += np.array([accuracy, accuracy_3, accuracy_5, accuracy_normal, loss, lp])
 			else:
-				result_new += np.array([accuracy, accuracy_3, loss])
+				result_new += np.array([accuracy, accuracy_3, accuracy_5, accuracy_normal, loss, lp])
 
-			logging.info("{}: data: {}, \taccuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
-				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
-				i, 
-				accuracy, 
-				accuracy_3, 
-				loss))
+			if not need_acc_normal:
+				logging.info("{}: data: {}, \taccuracy: {:.16f}, \t{:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+					i, 
+					accuracy, 
+					accuracy_3, 
+					accuracy_5, 
+					loss))
+			else:
+				logging.info("{}: data: {}, \taccuracy: {:.16f}, \t{:.16f}, \t{:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
+					i, 
+					accuracy, 
+					accuracy_3, 
+					accuracy_5, 
+					accuracy_normal, 
+					loss))
 
 			# save npy
 			if SAVE_NPY:
@@ -184,10 +210,11 @@ def test():
 			if SAVE_IMG:
 				# normal
 				if normal_ori_i == 0:
-					# if SAVE_DIF:
-					# 	dif_normal = np.abs(pre_normal[0] - normal[i])
-					# 	dif_normal_avg = np.average(dif_normal, axis = 2)
-					# 	cv.imwrite(outdatapath + '/difnormal_avg{}.png'.format(i), (dif_normal_avg / 2 * 255).astype(np.uint8))
+					if SAVE_DIF:
+						dif_normal = np.abs(pre_normal[0] - normal[i])
+						dif_normal_avg = np.average(dif_normal, axis = 2)
+						dif_rainbow = gray2rainbow((dif_normal_avg / 2 * 255).astype(np.uint8)) * mask[i]
+						cv.imwrite(outdatapath + '/difnormal_avg{}.png'.format(i), dif_rainbow)
 					pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
 					pre_normal[pre_normal > 255] = 255
 					cv.imwrite(outdatapath + '/prenormal{}.png'.format(i), pre_normal[0][..., ::-1])
@@ -204,26 +231,40 @@ def test():
 					dif_img_avg = np.average(dif_img, axis = 2)
 					dif_rainbow = gray2rainbow((dif_img_avg / np.max(dif_img_avg) * 255).astype(np.uint8)) * mask[i]
 					cv.imwrite(outdatapath + '/difimg_avg{}.png'.format(i), dif_rainbow)
+				img[img < 0] = 0
+				img[img > 1] = 1
 				img = (img * 255).astype(np.uint8)
-				img[img > 255] = 255
 				cv.imwrite(outdatapath + '/preimg{}.png'.format(i), img[0])
 		
 		if datasize_trained < datasize and datasize_trained > 0:
 			result_old /= datasize_trained
 			result_new /= (datasize - datasize_trained)
-			logging.info("{}: old average: accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
-				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_old[0], result_old[1], result_old[2]))
-			logging.info("{}: new average: accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
-				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_new[0], result_new[1], result_new[2]))
-			print("old average: accuracy {}, {}, loss {}".format(result_old[0], result_old[1], result_old[2]))
-			print("new average: accuracy {}, {}, loss {}".format(result_new[0], result_new[1], result_new[2]))
+			logging.info("{}: old average: accuracy: {:.16f}, \t{:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_old[0], result_old[1], result_old[2], result_old[4]))
+			logging.info("{}: new average: accuracy: {:.16f}, \t{:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
+				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_new[0], result_new[1], result_new[2], result_new[4]))
+			print("old average: accuracy {}, {}, {}, loss {}".format(result_old[0], result_old[1], result_old[2], result_old[4]))
+			print("new average: accuracy {}, {}, {}, loss {}".format(result_new[0], result_new[1], result_new[2], result_new[4]))
 
 		result_sum /= datasize
-		logging.info("{}: total average: accuracy: {:.16f}, \t{:.16f}, \tloss: {:.16f}".format(
-			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_sum[0], result_sum[1], result_sum[2]))
-		logging.info("{}: max acc3: idx: {}, accuracy: {:.16f}, \t{:.16f}".format(
-			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), max_idx, max_acc, max_acc3))
-		print("total average: accuracy {}, {}, loss {}".format(result_sum[0], result_sum[1], result_sum[2]))
+		if not need_acc_normal:
+			logging.info("{}: total average: accuracy: {:.16f}, \t{:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}".format(
+				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_sum[0], result_sum[1], result_sum[2], result_sum[4], result_sum[5]))
+			print("total average: accuracy {}, {}, {}, loss {}, {}".format(result_sum[0], result_sum[1], result_sum[2], result_sum[4], result_sum[5]))
+		else:
+			logging.info("{}: total average: accuracy: {:.16f}, \t{:.16f}, \t{:.16f}, \t{:.16f}, \tloss: {:.16f}, \t{:.16f}".format(
+				time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), result_sum[0], result_sum[1], result_sum[2], result_sum[3], result_sum[4], result_sum[5]))
+			print("total average: accuracy {}, {}, {}, {}, loss {}, {}".format(result_sum[0], result_sum[1], result_sum[2], result_sum[3], result_sum[4], result_sum[5]))
+
+		logging.info("{}: max acc3: idx: {}, accuracy: {:.16f}, \t{:.16f}, \t{:.16f}".format(
+			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), max_acc3[0], max_acc3[1], max_acc3[2], max_acc3[3]))
+		logging.info("{}: max acc5: idx: {}, accuracy: {:.16f}, \t{:.16f}, \t{:.16f}".format(
+			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), max_acc5[0], max_acc5[1], max_acc5[2], max_acc5[3]))
+
+		logging.info("{}: min loss: idx: {}, loss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
+			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), min_loss[0], min_loss[1], min_loss[2], min_loss[3]))
+		logging.info("{}: min lp: idx: {}, loss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
+			time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), min_lp[0], min_lp[1], min_lp[2], min_lp[3]))
 
 
 def test1():

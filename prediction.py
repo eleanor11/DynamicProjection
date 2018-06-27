@@ -46,6 +46,28 @@ def readData(indatapath, datasize, remove_back = False):
 
 	return normal, color, mask
 
+def readData1(indatapath, dataidx, remove_back = False):
+
+	print('load data')
+
+	normal = np.empty([0, 424, 512, 3], np.float32)
+	color = np.empty([0, 424, 512, 3], np.uint8)
+	mask = np.empty([0, 424, 512], np.bool)
+
+	for i in dataidx:
+		normal = np.append(normal, [np.load(indatapath + 'normal{}.npy'.format(i))], axis = 0)
+		color = np.append(color, [np.load(indatapath + 'color{}.npy'.format(i))], axis = 0)
+		mask = np.append(mask, [np.load(indatapath + 'mask{}.npy'.format(i))], axis = 0)
+
+	mask = np.expand_dims(mask, axis = 3)
+	color = color.astype(np.float32) / 255.0
+
+	if remove_back:
+		normal = normal * mask
+		color = color * mask
+
+	return normal, color, mask
+
 
 def predict():
 
@@ -53,7 +75,7 @@ def predict():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180613_010338_0'
+	path = '20180624_210335_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	# datasize, datasize_trained = 540, 540
@@ -61,17 +83,20 @@ def predict():
 	remove_back = False
 	# npy_list = []
 
+	# datasize, datasize_trained, npy_list = 500, 500, [367]
+	datasize, datasize_trained, npy_list = 500, 500, [316]
 	# datasize, datasize_trained, npy_list = 540, 540, [452]
 	# datasize, datasize_trained, npy_list = 40, 0, [1]
-	# datasize, datasize_trained, npy_list = 600, 600, [114]
-	datasize, datasize_trained, npy_list = 2, 0, []
+	# datasize, datasize_trained, npy_list = 600, 600, [373]
+	# datasize, datasize_trained, npy_list = 2, 0, []
 
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
-	# indatapath = PATH + 'train_data_{}/'.format(datasize)
-	indatapath = PATH + 'train_data_pig/'
+	indatapath = PATH + 'train_data_{}/'.format(datasize)
+	# indatapath = PATH + 'train_data_pig/'
 	outdatapath = prepareLog(normal_ori_i)
 
-	normal, color, mask = readData(indatapath, datasize, remove_back)
+	# normal, color, mask = readData(indatapath, datasize, remove_back)
+	normal, color, mask = readData1(indatapath, npy_list, remove_back)
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]
@@ -112,7 +137,8 @@ def predict():
 						model.lamda: 1.0}) 
 
 			# npy
-			if len(npy_list) == 0 or i in npy_list:
+			# if len(npy_list) == 0 or i in npy_list:
+			if True:
 				if normal_ori_i == 0:
 					np.save(outdatapath + '/prenormal{}.npy'.format(i), pre_normal[0])
 				np.save(outdatapath + '/prereflect{}.npy'.format(i), reflect[0])
@@ -133,8 +159,9 @@ def predict():
 			cv.imwrite(outdatapath + '/prereflect{}.png'.format(i), reflect[0])
 
 			# img
+			img[img < 0] = 0
+			img[img > 1] = 1
 			img = (img * 255).astype(np.uint8)
-			img[img > 255] = 255
 			cv.imwrite(outdatapath + '/preimg{}.png'.format(i), img[0])
 		
 		sess.close()

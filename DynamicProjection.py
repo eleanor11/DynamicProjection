@@ -22,10 +22,13 @@ SAVE = False
 SAVEALL = False
 REALTIME = False
 
+
 DATAPATH = '../DynamicProjectionData/'
 SUB = 'data/data_body/'
 SUBIN = 'data/data_body_0523/0/'
 SUBOUT = 'data/data_body_0524_pig_0610_3/'
+TEXTUREFILE = 'texture4.png'
+# TEXTUREFILE = ''
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -65,7 +68,10 @@ class DynamicProjection(object):
 		self.pwidth = 1024
 		self.pheight = 768
 
-		tex = cv.imread(DATAPATH + 'texture3.png')
+		if TEXTUREFILE == '':
+			tex = np.ones([128, 128, 3], np.uint8) * 255
+		else:
+			tex = cv.imread(DATAPATH + TEXTUREFILE)
 		self.render = GLRenderer(b'projection', (self.pwidth, self.pheight), tex)
 
 		self.mvp = glm.ortho(-1, 1, -1, 1, -1, 1000)
@@ -303,7 +309,7 @@ class DynamicProjection(object):
 		vertices = np.array([[-1, -1, 0], [3, -1, 0], [-1, 3, 0]], np.float32)
 		colors = np.ones([3, 3], np.float32) * 0.5
 
-		self.render.draw(vertices, colors, None, None, self.mvp.T, 0)
+		self.render.draw(vertices, colors, None, None, None, self.mvp.T, 0)
 
 
 	def project(self, rawdepth, corres, mask, normal_ori_i, pre_normal, pre_reflect):
@@ -312,6 +318,8 @@ class DynamicProjection(object):
 		rawdepth = rawdepth.reshape([424, 512])[mask]
 		u = np.array([[i for i in range(511, -1, -1)]] * 424)[mask]
 		v = np.array([[i for j in range(512)] for i in range(424)])[mask]
+
+		# print(u.shape, u)
 
 		Z = rawdepth / 1000
 		X = (u - self.cx) * Z / self.fx
@@ -345,6 +353,21 @@ class DynamicProjection(object):
 		vertices = np.zeros([num * 3, 3], np.float32)
 		vertices[0::3, :], vertices[1::3, :], vertices[2::3, :] = p0, p1, p2
 
+		uu = np.array([[i for i in range(512)]] * 424) 
+		uu = uu % 25 / 25.0
+		vv = np.array([[i for j in range(512)] for i in range(424)])
+		vv = vv % 25 / 25.0
+		uvmap = np.zeros([424, 512, 2], np.float32)
+		uvmap[..., 0], uvmap[..., 1] = uu, vv
+		# uvmap[0::2, 0::2] = np.array([0.0, 0.0])
+		# uvmap[1::2, 0::2] = np.array([1.0, 0.0])
+		# uvmap[0::2, 1::2] = np.array([0.0, 1.0])
+		# uvmap[1::2, 1::2] = np.array([1.0, 1.0])
+		uv0 = np.concatenate([uvmap[cul_cmask], uvmap[cdr_cmask]], 0)
+		uv1 = np.concatenate([uvmap[cul_umask], uvmap[cdr_dmask]], 0)
+		uv2 = np.concatenate([uvmap[cul_lmask], uvmap[cdr_rmask]], 0)
+		uv = np.zeros([num * 3, 2], np.float32)
+		uv[0::3, :], uv[1::3, :], uv[2::3, :] = uv0, uv1, uv2
 
 		position = np.array([[[i, j] for j in range(512)] for i in range(424)])
 		pos0 = np.concatenate([position[cul_cmask], position[cdr_cmask]], 0)
@@ -391,7 +414,7 @@ class DynamicProjection(object):
 		# vertex_normals = ((vertex_normals + 1) / 2 * 255).astype(np.uint8)
 		# cv.imshow('norm', vertex_normals)
 
-		self.render.draw(vertices, colors, normals, reflects, self.mvp.T)
+		self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T)
 
 
 	def getRawData(self):
@@ -705,7 +728,7 @@ class DynamicProjection(object):
 
 			# init net
 			sess = tf.Session()
-			model, normal_ori_i, content = self.initNet('20180609_234840_0', sess)
+			model, normal_ori_i, content = self.initNet('20180624_210335_0', sess)
 			
 			self.time = time.time()
 
@@ -832,6 +855,49 @@ class DynamicProjection(object):
 					# # pre_reflect = np.load(path + 'prereflect452.npy')
 					# # pre_img = np.load(path + 'preimg452.npy')
 
+					# # dataset 600 (373)
+					# datetime = '20180606_142314_0'
+					# path = DATAPATH + 'prediction/' + datetime + '/data/'
+					# outpath = DATAPATH + 'render_prediction/' + datetime
+					# if not os.path.isdir(outpath):
+					# 	os.mkdir(outpath)
+
+					# rawdepth_filter = np.load(DATAPATH + 'train_data_600_rawdepth/rawdepth_filter373.npy')
+					# mask = np.load(DATAPATH + 'train_data_600/mask373.npy')
+					# # pre_normal = np.load(DATAPATH + 'train_data_600/normal373.npy')
+					# pre_normal = np.load(path + 'prenormal373.npy')
+					# pre_reflect = np.load(path + 'prereflect373.npy')
+					# pre_img = np.load(path + 'preimg373.npy')
+
+					# # dataset 500 (367(0))
+					# datetime = '20180626_200208_0'
+					# path = DATAPATH + 'prediction/' + datetime + '/data/'
+					# outpath = DATAPATH + 'render_prediction/' + datetime
+					# if not os.path.isdir(outpath):
+					# 	os.mkdir(outpath)
+
+					# rawdepth_filter = np.load(DATAPATH + 'train_data_500_rawdepth/rawdepth_filter367.npy')
+					# mask = np.load(DATAPATH + 'train_data_500/mask367.npy')
+					# # pre_normal = np.load(DATAPATH + 'train_data_500/normal367.npy')
+					# pre_normal = np.load(path + 'prenormal0.npy')
+					# pre_reflect = np.load(path + 'prereflect0.npy')
+					# pre_img = np.load(path + 'preimg0.npy')
+
+					# # dataset 500 (316(0))
+					# datetime = '20180626_204232_0'
+					# path = DATAPATH + 'prediction/' + datetime + '/data/'
+					# outpath = DATAPATH + 'render_prediction/' + datetime
+					# if not os.path.isdir(outpath):
+					# 	os.mkdir(outpath)
+
+					# rawdepth_filter = np.load(DATAPATH + 'train_data_500_rawdepth/rawdepth_filter316.npy')
+					# mask = np.load(DATAPATH + 'train_data_500/mask316.npy')
+					# # pre_normal = np.load(DATAPATH + 'train_data_500/normal316.npy')
+					# pre_normal = np.load(path + 'prenormal0.npy')
+					# pre_reflect = np.load(path + 'prereflect0.npy')
+					# pre_img = np.load(path + 'preimg0.npy')
+
+
 					# pre_normal[..., 0] = 0 - pre_normal[..., 0]
 
 					# pre_img = np.expand_dims(pre_img, 0)
@@ -853,7 +919,6 @@ class DynamicProjection(object):
 					# render content
 					corres = np.zeros([424, 512, 3], np.uint8)
 					corres[mask] = np.array([255, 255, 255])
-					texture = cv.imread(DATAPATH + 'texture2.png')
 					# corres[mask] = texture[mask]
 					# corres[mask] = pre_img[0][mask] * 255
 					# cv.imshow('corres', corres)

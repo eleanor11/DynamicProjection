@@ -23,6 +23,9 @@ def max_pool_2x2(x):
 def relu(x):
 	return tf.nn.relu(x)
 
+def sigmoid(x):
+	return tf.nn.sigmoid(x)
+
 def dropout(x, keep_prob):
 	return tf.nn.dropout(x, keep_prob)
 
@@ -117,7 +120,10 @@ class DPNet:
 		W_conv6 = weight_variable([3, 3, 16, 3])
 		h_conv6 = conv2d(h_conv5_relu, W_conv6, [1, 1, 1, 1])
 
-		return h_conv6
+		# return h_conv6
+
+		h_sig = sigmoid(h_conv6)
+		return h_sig
 
 
 	def net(self, mode = 'training'):
@@ -163,8 +169,16 @@ class DPNet:
 		train_step_gd = tf.train.GradientDescentOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
 
 		accuracy = tf.reduce_sum(tf.cast(tf.equal(self.color, I_), tf.float32) * self.mask) / mask_sum
-		delta = 3.0 / 256.0
-		accuracy_3 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.color - I_), delta), tf.float32) * self.mask) / mask_sum
+		delta3 = 3.0 / 256.0
+		accuracy_3 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.color - I_), delta3), tf.float32) * self.mask) / mask_sum
+		delta5 = 5.0 / 256.0
+		accuracy_5 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.color - I_), delta5), tf.float32) * self.mask) / mask_sum
+
+		accuracy_normal = tf.reduce_sum(tf.cast(tf.equal(self.normal, normal), tf.float32) * self.mask) / mask_sum
+		delta3 = 2 * 0.03
+		accuracy_n3 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.normal - normal), delta3), tf.float32) * self.mask) / mask_sum
+		delta5 = 2 * 0.05
+		accuracy_n5 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.normal - normal), delta5), tf.float32) * self.mask) / mask_sum
 
 		normalm = normal * self.mask
 		reflectm = reflect * self.mask
@@ -173,7 +187,7 @@ class DPNet:
 		if mode == 'training':
 			return train_step_adam, train_step_gd, accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
 		elif mode == 'testing':
-			return accuracy, accuracy_3, loss, normalm, reflectm, Im_, loss_res, loss_prior
+			return accuracy, accuracy_3, accuracy_5, accuracy_n5, loss, normalm, reflectm, Im_, loss_res, loss_prior
 		elif mode == 'predicting':
 			return normalm, reflectm, Im_
 
