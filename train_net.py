@@ -65,8 +65,8 @@ def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False
 	# 	indices = np.random.permutation(data_size)
 	# 	np.save(outdatapath + '/indices.npy', indices)
 	
-	indices = np.load(PATH + 'indices/indices0.npy')
-	# indices = np.load(PATH + 'indices/indices1.npy')
+	# indices = np.load(PATH + 'indices/indices0.npy')
+	indices = np.load(PATH + 'indices/indices1.npy')
 
 	train_idx, test_idx = indices[: train_size], indices[train_size:]
 	train_normal, test_normal = normal[train_idx], normal[test_idx]
@@ -140,7 +140,7 @@ def train():
 	lamda_default = 1
 	# lamda_default = 10
 
-	learning_rate = 1e-4
+	learning_rate = 1e-2
 
 	indatapath = PATH + 'train_data_{}/'.format(data_size)
 	# indatapath = PATH + 'train_data_{}_1/'.format(data_size)
@@ -222,7 +222,7 @@ def train():
 				result_sum = np.zeros((5), np.float32)
 				while test_idx + batch_size <= test_size:
 					result = sess.run(
-						[accuracy, accuracy_3, loss_, lr_, lp_, I_], 
+						[accuracy, accuracy_3, loss_, lr_, lp_, I_, normal_], 
 						feed_dict = {
 							model.normal: test_normal[test_idx: test_idx + batch_size], 
 							model.color: test_color[test_idx: test_idx + batch_size], 
@@ -231,8 +231,14 @@ def train():
 					result_cnt += 1
 					result_sum += np.array(result[0: 5])
 
+					pre_normal = result[6]
 					test_ii = result[5]
 					if i % 2000 == 0 or i == 19999:
+						pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
+						pre_normal[pre_normal > 255] = 255
+						for j in range(batch_size):
+							cv.imwrite(outdatapath + '/prenormal{}_{}.png'.format(i, test_idx + j), pre_normal[j][..., ::-1])
+
 						test_ii[test_ii < 0] = 0
 						test_ii[test_ii > 1] = 1
 						test_ii = (test_ii * 255).astype(np.uint8)

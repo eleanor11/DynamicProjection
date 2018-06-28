@@ -91,14 +91,14 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180624_210335_0'
+	path = '20180628_003705_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
-	# datasize, datasize_trained = 500, 500
+	datasize, datasize_trained = 500, 500
 	# datasize, datasize_trained = 600, 600
-	datasize, datasize_trained = 660, 660
+	# datasize, datasize_trained = 660, 660
 	# datasize, datasize_trained = 40, 0
-	# datasize, datasize_trained = 6, 0
+	# datasize, datasize_trained = 2, 0
 
 	# need_acc_normal = True
 	need_acc_normal = False
@@ -108,7 +108,7 @@ def test():
 
 	indatapath = PATH + 'train_data_{}/'.format(datasize)
 	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)
-	# indatapath = PATH + 'train_data_pig/1/'
+	# indatapath = PATH + 'train_data_pig/'
 	outdatapath = prepareLog(normal_ori_i)
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
 	# ckptpath = PATH + 'train_log/' + path + '/ckpt/10000'

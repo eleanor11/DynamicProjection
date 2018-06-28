@@ -11,11 +11,17 @@ PROJECTION_MODE = False
 # 1: shader1(lambert) 	
 # 2: shader2(reflect * normal)
 # SHADER = 0
-# SHADER = 1
-SHADER = 2
-lightPosition = np.array([0.0, 0.0, 1.0])
+SHADER = 1
+# SHADER = 2
+# # lightPosition = np.array([0.0, 0.0, 1.0])
 # lightPosition = np.array([-1.0, 0.0, 0.0])
+# # lightPosition = np.array([1.0, 2.0, 0.0])
+
+# lightPosition = np.array([1.0, 0.0, 1.0])
+# lightPosition = np.array([0.0, 0.0, 1.0])
 # lightPosition = np.array([1.0, 2.0, 0.0])
+lightPosition = np.array([1.0, 0.0, 0.2])
+# lightPosition = np.array([1.0, 0.0, 0.5])
 
 def LoadProgram(shaderPathList):
 	shaderTypeMapping = {

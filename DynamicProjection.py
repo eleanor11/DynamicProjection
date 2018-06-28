@@ -25,10 +25,10 @@ REALTIME = False
 
 DATAPATH = '../DynamicProjectionData/'
 SUB = 'data/data_body/'
-SUBIN = 'data/data_body_0523/0/'
+SUBIN = 'data/data_pig_0627_origin/'
 SUBOUT = 'data/data_body_0524_pig_0610_3/'
-TEXTUREFILE = 'texture4.png'
-# TEXTUREFILE = ''
+# TEXTUREFILE = 'texture4.png'
+TEXTUREFILE = ''
 
 class DynamicProjection(object):
 	def __init__(self):
