@@ -67,6 +67,7 @@ def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False
 	
 	# indices = np.load(PATH + 'indices/indices0.npy')
 	indices = np.load(PATH + 'indices/indices1.npy')
+	np.save(outdatapath + '/indices.npy', indices)
 
 	train_idx, test_idx = indices[: train_size], indices[train_size:]
 	train_normal, test_normal = normal[train_idx], normal[test_idx]
