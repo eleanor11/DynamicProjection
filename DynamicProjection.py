@@ -841,7 +841,7 @@ class DynamicProjection(object):
 						pre_img = np.save(path + '/preimg.npy')
 
 
-						# test render prediction
+					# # test render prediction
 						# dptest.testRenderPrediction('', '', )
 
 						# normal_ori_i = 0
@@ -959,23 +959,10 @@ class DynamicProjection(object):
 						np.save(DATAPATH + SUB + 'corres.npy', corres)
 
 
-					# # test color projection
-						# corres = np.array([[[(i + j + k * 80) % 256 for k in range(3)] for j in range(512)] for i in range(424)])
-						# corres[np.logical_not(mask)] = np.array([0, 0, 0])
+					# # test corres
+					# corres = dptest.testCorres(corres, mask)
 
-					# # test image projection
-						# image = cv.imread(DATAPATH + 'data/image.bmp')
-						# image = image[..., ::-1]
-
-						# x0, y0, x1, y1 = 120, 205, 290, 335
-						# w, h = image.shape[0], image.shape[1]
-						# corres[x0: x1, y0: y1] = np.array([[image[int((i - x0) / (x1 - x0) * h), int((y1 - 1 - j) / (y1 - y0) * w)] for j in range(y0, y1)] for i in range(x0, x1)])
-
-					# test position projection
-						# corres[200: 210, 250: 260] = np.array([255, 0, 0])
-						# corres[100: 110, 230: 240] = np.array([255, 0, 0])
-
-					# tests end
+					
 
 
 				if time.time() - self.time > 5:
