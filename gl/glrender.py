@@ -5,7 +5,7 @@ import numpy as np
 import cv2 as cv
 import PIL.Image as im
 
-PROJECTION_MODE = False
+PROJECTION_MODE = True
 
 # 0: default	
 # 1: shader1(lambert) 	
@@ -55,7 +55,7 @@ def LoadProgram(shaderPathList):
 def LoadTexture(image):
 
 	[w, h] = image.shape[0:2]
-	print(w, h)
+	# print(w, h)
 
 	texture = glGenTextures(1)
 	glActiveTexture(GL_TEXTURE0)
@@ -146,6 +146,9 @@ class GLRenderer(object):
 			glUniform3fv(self.lightPosition_2, 1, self.lightPosition)
 			glUniform3fv(self.lightColor_2, 1, self.lightColor)
 			glUniform1i(self.texture_, 0)
+
+		# print('lightPosition ', self.lightPosition)
+		# print('lightColor ', self.lightColor)
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)

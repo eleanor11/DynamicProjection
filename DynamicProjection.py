@@ -16,27 +16,27 @@ import dptest
 
 DATAPATH = '../DynamicProjectionData/'
 
-MODE = 2
+MODE = 1
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use off-line data for all
-SUBIN = 'data/data_pig_0627_origin/'
+SUBIN = 'data/data_pig_0629_origin/'
 
 SAVE = False
-SUB = 'data/data_pig_0627_origin/'
+SUB = 'data/data_pig_0629_origin/'
 
-SAVEALL = False
-SUBOUT = 'data/data_pig_0627_origin/'
+SAVEALL = True
+SUBOUT = 'data/data_pig_0629_1/'
 
 
-RECONSTRUCTION_MODE = 2
+RECONSTRUCTION_MODE = 1
 # 0: no reconstruction
 # 1: reconstruction of real scene
 # 2: use off-line data (rawdepth, mask, pre_normal, pre_reflect, pre_img)
 SUB_BRDF = ''
 
 PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian']
-REALTIME_MODE = 2
+REALTIME_MODE = 3
 # 0: predicted, not realtime
 # 1: lighting & predicted
 # 2: lighting & predicted & lambertian
@@ -53,6 +53,8 @@ LightPositions = np.array([
 ])
 LightColors = np.array([
 	[1.0, 1.0, 1.0], 
+	[0.0, 1.0, 1.0], 
+	[0.0, 0.0, 1.0], 
 ])
 
 class DynamicProjection(object):
@@ -237,7 +239,7 @@ class DynamicProjection(object):
 
 			for i in range(num_frame):
 				while 1:
-					x = 0
+					x = i
 					if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 						depth_frame = self.kinect.get_last_depth_frame()
 						color_frame = self.kinect.get_last_color_frame()
@@ -816,8 +818,8 @@ class DynamicProjection(object):
 					# BRDF reconstruction
 					if RECONSTRUCTION_MODE == 0:
 						normal_ori_i = 1
-						pre_reflect = np.ones([424, 512, 3], np.float32)
-						pre_normal = None
+						pre_reflect = np.ones([1, 424, 512, 3], np.float32)
+						pre_normal = [None]
 					elif RECONSTRUCTION_MODE == 1:
 						normal_ori_i = 0
 						normal = self.depth2normal(rawdepth_filter, mask)
@@ -917,11 +919,12 @@ class DynamicProjection(object):
 							np.save(path + '/prenormal.npy', pre_normal[0])
 							np.save(path + '/prereflect.npy', pre_reflect[0])
 							np.save(path + '/preimg.npy', pre_img[0])
+							cv.imwrite(DATAPATH + SUBOUT + 'cameraColorLighting{}.png'.format(self.index), cameraColor)
 						else:
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'cameraColor{}.png'.format(self.index), cameraColor)
+							cv.imwrite(DATAPATH + SUBOUT + 'cameraColor{}_{}.png'.format(self.index, projection_mode), cameraColor)
 							cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
 							cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
 
@@ -950,13 +953,17 @@ class DynamicProjection(object):
 
 					self.time = time.time()
 
-				# set illumination
-				if REALTIME_MODE == 3:
-					GLRenderer.lightPosition = LightPositions[light_position_idx]
-					GLRenderer.light_color_idx = LightColors[light_color_idx]
-					light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
-					if light_position_idx == 0:
-						light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
+					# set illumination
+					if REALTIME_MODE == 3 and projection_mode == 1:
+						self.render.lightPosition = LightPositions[light_position_idx]
+						self.render.lightColor = LightColors[light_color_idx]
+						print('light_position_idx ', light_position_idx)
+						print('light_color_idx ', light_color_idx)
+						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
+						if light_position_idx == 0:
+							light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
+							if light_color_idx == 0:
+								run = False
 
 				if projection_mode == 0:
 					self.projectLight()
