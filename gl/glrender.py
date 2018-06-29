@@ -92,6 +92,9 @@ class GLRenderer(object):
 
 		self.shader = SHADER
 
+		self.lightPosition = lightPosition
+		self.lightColor = np.array([1.0, 1.0, 1.0], np.float32)
+
 		if self.shader > 0:
 			self.normalBuf = glGenBuffers(1)
 		if self.shader > 1:
@@ -113,15 +116,15 @@ class GLRenderer(object):
 			self.mvpMatrix = glGetUniformLocation(self.program[i], 'MVP')
 
 		if self.shader == 1:
-			self.kd = glGetUniformLocation(self.program[1], 'kd')
-			self.ld = glGetUniformLocation(self.program[1], 'ld')
-			self.lightPosition = glGetUniformLocation(self.program[1], 'lightPosition')
-			self.lightColor = glGetUniformLocation(self.program[1], 'lightColor')
+			self.kd_ = glGetUniformLocation(self.program[1], 'kd')
+			self.ld_ = glGetUniformLocation(self.program[1], 'ld')
+			self.lightPosition_ = glGetUniformLocation(self.program[1], 'lightPosition')
+			self.lightColor_ = glGetUniformLocation(self.program[1], 'lightColor')
 			# self.texture = glGetUniformLocation(self.program[1], 'myTexture')
 		elif self.shader == 2:
-			self.lightPosition = glGetUniformLocation(self.program[2], 'lightPosition')
-			self.lightColor = glGetUniformLocation(self.program[2], 'lightColor')
-			self.texture = glGetUniformLocation(self.program[2], 'myTexture')
+			self.lightPosition_ = glGetUniformLocation(self.program[2], 'lightPosition')
+			self.lightColor_ = glGetUniformLocation(self.program[2], 'lightColor')
+			self.texture_ = glGetUniformLocation(self.program[2], 'myTexture')
 
 
 
@@ -133,17 +136,15 @@ class GLRenderer(object):
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
 
 		if self.shader == 1:
-			glUniform3fv(self.kd, 1, np.array((0.9, 0.9, 0.9), np.float32))
-			glUniform3fv(self.ld, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			glUniform3fv(self.lightPosition, 1, lightPosition)
-			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			# glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
-			# glUniform1i(self.texture, 0)
+			glUniform3fv(self.kd_, 1, np.array((0.9, 0.9, 0.9), np.float32))
+			glUniform3fv(self.ld_, 1, np.array((1.0, 1.0, 1.0), np.float32))
+			glUniform3fv(self.lightPosition_, 1, self.lightPosition)
+			glUniform3fv(self.lightColor_, 1, self.lightColor)
+			# glUniform1i(self.texture_, 0)
 		elif self.shader == 2:
-			glUniform3fv(self.lightPosition, 1, lightPosition)
-			glUniform3fv(self.lightColor, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			# glUniform3fv(self.lightColor, 1, np.array((1.0, 0.5, 0.5), np.float32))
-			glUniform1i(self.texture, 0)
+			glUniform3fv(self.lightPosition_, 1, lightPosition)
+			glUniform3fv(self.lightColor_, 1, lightColor)
+			glUniform1i(self.texture_, 0)
 
 
 		glEnableVertexAttribArray(0)

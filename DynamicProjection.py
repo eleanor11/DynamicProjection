@@ -40,10 +40,20 @@ REALTIME_MODE = 0
 # 0: not realtime
 # 1: lighting & predicted
 # 2: lighting & predicted & lambertian
+# 3: predicted & lambertian, chang illumination
 
 # TEXTUREFILE = 'texture4.png'
 TEXTUREFILE = ''
 
+LightPositions = np.array([
+	[0.0, 0.0, 1.0], 
+	[1.0, 0.0, 1.0], 
+	[1.0, 0.0, 0.5], 
+	[1.0, 0.0, 0.2]
+])
+LightColors = np.array([
+	[1.0, 1.0, 1.0], 
+])
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -757,10 +767,13 @@ class DynamicProjection(object):
 			# 1: virtual scene with learned BRDF, 
 			# 2: virtual scene with lambertian BRDF,
 			# 3: casual
-			if REALTIME:
+			if REALTIME_MODE > 0:
 				projection_mode = 0
 			else:
 				projection_mode = 1
+
+			light_position_idx = 0
+			light_color_idx = 0
 
 		while run:
 			ch = cv.waitKey(1)
@@ -972,7 +985,9 @@ class DynamicProjection(object):
 						if not os.path.isdir(DATAPATH + SUBOUT):
 							os.mkdir(DATAPATH + SUBOUT)
 
-						if REALTIME == 0  or projection_mode == 0:
+						makedir = REALTIME_MODE == 0 or projection_mode == 0
+						makedir = makedir or (REALTIME_MODE == 3 and projection_mode == 1)
+						if makedir:
 							path = '{}{}'.format(DATAPATH + SUBOUT, self.index)
 							while os.path.isdir(path):
 								self.index += 1
@@ -985,7 +1000,7 @@ class DynamicProjection(object):
 						elif projection_mode == 1:
 							print('record predicted')
 							path = '{}{}'.format(DATAPATH + SUBOUT, self.index) + '/predicted'
-						else:
+						elif projection_mode == 2:
 							print('record lambertian')
 							path = '{}{}'.format(DATAPATH + SUBOUT, self.index) + '/lambertian'
 						os.mkdir(path)
@@ -1011,8 +1026,14 @@ class DynamicProjection(object):
 							np.save(path + '/rawcolor.npy', rawcolor)
 							np.save(path + '/rawinfrared.npy', rawinfrared)
 
-					if REALTIME > 0:
-						projection_mode = (projection_mode + 1) % (REALTIME + 1)
+					if REALTIME_MODE == 3:
+						projection_mode = projection_mode % 2 + 1
+						print('project' + PROJECTION_TYPE[projection_mode])
+						if projection_mode == 1:
+							self.idx += 1
+							print(self.idx)
+					elif REALTIME_MODE > 0:
+						projection_mode = (projection_mode + 1) % (REALTIME_MODE + 1)
 						print('project' + PROJECTION_TYPE[projection_mode])
 						if projection_mode == 0:
 							self.idx += 1
@@ -1022,6 +1043,14 @@ class DynamicProjection(object):
 						print(self.idx)
 
 					self.time = time.time()
+
+				# set illumination
+				if REALTIME_MODE == 3:
+					GLRenderer.lightPosition = LightPositions[light_position_idx]
+					GLRenderer.light_color_idx = LightColors[light_color_idx]
+					light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
+					if light_position_idx == 0:
+						light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
 
 				if projection_mode == 0:
 					self.projectLight()
