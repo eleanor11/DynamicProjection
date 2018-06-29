@@ -1,8 +1,13 @@
 import numpy as np 
 import cv2 as cv
+import os
 
+DATAPATH = '../DynamicProjectionData/'
 
-def testRenderPrediction(datetime, dataset, dataidx):
+def testRenderPrediction(datetime, dataset, dataidx, npyidx = -1):
+	if npyidx == -1:
+		npyidx = dataidx
+
 	normal_ori_i = 0
 
 	path = DATAPATH + 'prediction/' + datetime + '/data/'
@@ -13,9 +18,9 @@ def testRenderPrediction(datetime, dataset, dataidx):
 	rawdepth_filter = np.load(DATAPATH + 'train_data_{}_rawdepth/rawdepth_filter{}.npy'.format(dataset, dataidx))
 	mask = np.load(DATAPATH + 'train_data_{}/mask{}.npy'.format(dataset, dataidx))
 	# pre_normal = np.load(DATAPATH + 'train_data_{}/normal{}.npy')
-	pre_normal = np.load(path + 'prenormal{}.npy'.format(dataidx))
-	pre_reflect = np.load(path + 'prereflect{}.npy'.format(dataidx))
-	pre_img = np.load(path + 'preimg{}.npy'.format(dataidx))
+	pre_normal = np.load(path + 'prenormal{}.npy'.format(npyidx))
+	pre_reflect = np.load(path + 'prereflect{}.npy'.format(npyidx))
+	pre_img = np.load(path + 'preimg{}.npy'.format(npyidx))
 
 
 
@@ -110,7 +115,7 @@ def testRenderPrediction(datetime, dataset, dataidx):
 	pre_normal = np.expand_dims(pre_normal, 0)
 	pre_reflect = np.expand_dims(pre_reflect, 0)
 
-	return normal_ori_i, pre_img, pre_normal, pre_reflect
+	return normal_ori_i, rawdepth_filter, mask, pre_img, pre_normal, pre_reflect
 
 
 def testCorres(corres, mask):

@@ -11,16 +11,16 @@ PROJECTION_MODE = False
 # 1: shader1(lambert) 	
 # 2: shader2(reflect * normal)
 # SHADER = 0
-SHADER = 1
-# SHADER = 2
+# SHADER = 1
+SHADER = 2
 # # lightPosition = np.array([0.0, 0.0, 1.0])
 # lightPosition = np.array([-1.0, 0.0, 0.0])
 # # lightPosition = np.array([1.0, 2.0, 0.0])
 
 # lightPosition = np.array([1.0, 0.0, 1.0])
-# lightPosition = np.array([0.0, 0.0, 1.0])
+lightPosition = np.array([0.0, 0.0, 1.0])
 # lightPosition = np.array([1.0, 2.0, 0.0])
-lightPosition = np.array([1.0, 0.0, 0.2])
+# lightPosition = np.array([1.0, 0.0, 0.2])
 # lightPosition = np.array([1.0, 0.0, 0.5])
 
 def LoadProgram(shaderPathList):
@@ -95,12 +95,12 @@ class GLRenderer(object):
 		self.lightPosition = lightPosition
 		self.lightColor = np.array([1.0, 1.0, 1.0], np.float32)
 
-		if self.shader > 0:
-			self.normalBuf = glGenBuffers(1)
-		if self.shader > 1:
-			self.reflectBuf = glGenBuffers(1)
-			self.texture = LoadTexture(tex_image)
-			self.uvBuf = glGenBuffers(1)
+		# shader 1
+		self.normalBuf = glGenBuffers(1)
+		# shader 2
+		self.reflectBuf = glGenBuffers(1)
+		self.texture = LoadTexture(tex_image)
+		self.uvBuf = glGenBuffers(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
 
@@ -115,16 +115,17 @@ class GLRenderer(object):
 		for i in range(3):
 			self.mvpMatrix = glGetUniformLocation(self.program[i], 'MVP')
 
-		if self.shader == 1:
-			self.kd_ = glGetUniformLocation(self.program[1], 'kd')
-			self.ld_ = glGetUniformLocation(self.program[1], 'ld')
-			self.lightPosition_ = glGetUniformLocation(self.program[1], 'lightPosition')
-			self.lightColor_ = glGetUniformLocation(self.program[1], 'lightColor')
-			# self.texture = glGetUniformLocation(self.program[1], 'myTexture')
-		elif self.shader == 2:
-			self.lightPosition_ = glGetUniformLocation(self.program[2], 'lightPosition')
-			self.lightColor_ = glGetUniformLocation(self.program[2], 'lightColor')
-			self.texture_ = glGetUniformLocation(self.program[2], 'myTexture')
+		# shader 1
+		self.kd_ = glGetUniformLocation(self.program[1], 'kd')
+		self.ld_ = glGetUniformLocation(self.program[1], 'ld')
+		self.lightPosition_1 = glGetUniformLocation(self.program[1], 'lightPosition')
+		self.lightColor_1 = glGetUniformLocation(self.program[1], 'lightColor')
+		# self.texture = glGetUniformLocation(self.program[1], 'myTexture')
+
+		# shader 2
+		self.lightPosition_2 = glGetUniformLocation(self.program[2], 'lightPosition')
+		self.lightColor_2 = glGetUniformLocation(self.program[2], 'lightColor')
+		self.texture_ = glGetUniformLocation(self.program[2], 'myTexture')
 
 
 
@@ -138,14 +139,13 @@ class GLRenderer(object):
 		if self.shader == 1:
 			glUniform3fv(self.kd_, 1, np.array((0.9, 0.9, 0.9), np.float32))
 			glUniform3fv(self.ld_, 1, np.array((1.0, 1.0, 1.0), np.float32))
-			glUniform3fv(self.lightPosition_, 1, self.lightPosition)
-			glUniform3fv(self.lightColor_, 1, self.lightColor)
+			glUniform3fv(self.lightPosition_1, 1, self.lightPosition)
+			glUniform3fv(self.lightColor_1, 1, self.lightColor)
 			# glUniform1i(self.texture_, 0)
 		elif self.shader == 2:
-			glUniform3fv(self.lightPosition_, 1, lightPosition)
-			glUniform3fv(self.lightColor_, 1, lightColor)
+			glUniform3fv(self.lightPosition_2, 1, self.lightPosition)
+			glUniform3fv(self.lightColor_2, 1, self.lightColor)
 			glUniform1i(self.texture_, 0)
-
 
 		glEnableVertexAttribArray(0)
 		glBindBuffer(GL_ARRAY_BUFFER, self.vertexBuf)
