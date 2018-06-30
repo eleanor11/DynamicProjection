@@ -91,7 +91,7 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180628_003705_0'
+	path = '20180630_092453_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
 	datasize, datasize_trained = 500, 500

@@ -847,6 +847,7 @@ class DynamicProjection(object):
 									model.mask: [np.expand_dims(mask, 2)], 
 									model.lamda: 1.0
 								})
+							pre_normal_o = copy.copy(pre_normal)
 							pre_normal[..., 0] = 0 - pre_normal[..., 0]
 
 							# cv.imshow('pre_img', (pre_img[0] * 255).astype(np.uint8))
@@ -937,18 +938,18 @@ class DynamicProjection(object):
 							np.save(path + '/prereflect.npy', pre_reflect[0])
 							np.save(path + '/preimg.npy', pre_img[0])
 
-							cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+							cv.imwrite(path + '/prenormal.png', ((pre_normal_o[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
 							cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
 
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'color{}_lighting.png'.format(self.index), color * np.expand_dims(mask, axis = 3))
+							cv.imwrite(DATAPATH + SUBOUT + 'color{}_0lighting.png'.format(self.index), color * np.expand_dims(mask, axis = 3))
 						else:
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'color{}_{}.png'.format(self.index, projection_mode), color * np.expand_dims(mask, axis = 3))
+							cv.imwrite(DATAPATH + SUBOUT + 'color{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode]), color * np.expand_dims(mask, axis = 3))
 							cv.imwrite(path + '/render.png', rgb / 0.4)
 
 							np.save(path + '/depthback_origin.npy', self.depthback_origin)
