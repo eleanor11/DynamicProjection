@@ -16,27 +16,28 @@ import dptest
 
 DATAPATH = '../DynamicProjectionData/'
 
-MODE = 1
+MODE = 2
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use off-line data for all
-SUBIN = 'data/data_pig_0629_origin/'
+SUBIN = 'data/data_body_0629_2_origin/'
 
 SAVE = False
-SUB = 'data/data_pig_0629_origin/'
+SUB = 'data/data_body_0629_2_origin/'
 
-SAVEALL = True
-SUBOUT = 'data/data_pig_0629_1/'
+SAVEALL = False
+SUBOUT = 'data/data_pig_0629_21/'
 
 
-RECONSTRUCTION_MODE = 1
+RECONSTRUCTION_MODE = 2
 # 0: no reconstruction
 # 1: reconstruction of real scene
 # 2: use off-line data (rawdepth, mask, pre_normal, pre_reflect, pre_img)
-SUB_BRDF = ''
+# SUB_BRDF = 'data/data_pig_0629/0/'
+SUB_BRDF = 'data/data_body_0629_21/0/'
 
 PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian']
-REALTIME_MODE = 3
+REALTIME_MODE = 0
 # 0: predicted, not realtime
 # 1: lighting & predicted
 # 2: lighting & predicted & lambertian
@@ -56,6 +57,12 @@ LightColors = np.array([
 	[0.0, 1.0, 1.0], 
 	[0.0, 0.0, 1.0], 
 ])
+
+# LightColors = np.array([
+# 	[1.0, 1.0, 1.0], 
+# 	[1.0, 1.0, 0.0], 
+# 	[0.0, 1.0, 0.0], 
+# ])
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -334,9 +341,11 @@ class DynamicProjection(object):
 	def projectLight(self):
 
 		vertices = np.array([[-1, -1, 0], [3, -1, 0], [-1, 3, 0]], np.float32)
-		colors = np.ones([3, 3], np.float32) * 0.5
+		colors = np.ones([3, 3], np.float32) * 0.25
 
-		self.render.draw(vertices, colors, None, None, None, self.mvp.T, 0)
+		# print(colors)
+
+		rgb, z = self.render.draw(vertices, colors, None, None, None, self.mvp.T, 0)
 
 
 	def project(self, rawdepth, corres, mask, normal_ori_i, pre_normal, pre_reflect, shader = -1):
@@ -442,9 +451,11 @@ class DynamicProjection(object):
 		# cv.imshow('norm', vertex_normals)
 
 		if shader == -1:
-			self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T)
+			rgb, z = self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T)
 		else:
-			self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T, shader)
+			rgb, z = self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T, shader)
+
+		return rgb, z
 
 
 	def getRawData(self):
@@ -750,7 +761,6 @@ class DynamicProjection(object):
 		# cd_dirname = 'capture_data_origin_pig/'
 		# self.captureTrainData(gid, gnum, gdelay, cd_dirname)
 		# run = False
-
 		
 		print('start...')
 
@@ -765,17 +775,20 @@ class DynamicProjection(object):
 			
 			self.time = time.time()
 
+			# -1: default
 			# 0: lighting,  
 			# 1: virtual scene with learned BRDF, 
-			# 2: virtual scene with lambertian BRDF,
-			# 3: casual
+			# 2: virtual scene with lambertian BRDF
 			if REALTIME_MODE > 0:
 				projection_mode = 0
 			else:
-				projection_mode = 1
+				projection_mode = -1
 
 			light_position_idx = 0
 			light_color_idx = 0
+
+			self.render.lightPosition = LightPositions[light_position_idx]
+			self.render.lightColor = LightColors[light_color_idx]
 
 		while run:
 			ch = cv.waitKey(1)
@@ -848,17 +861,18 @@ class DynamicProjection(object):
 									model.lamda: 1.0
 								})
 					elif RECONSTRUCTION_MODE == 2:
-						# normal_ori_i = 0
-						# path = DATAPATH + SUB_BRDF + 'lighting'
-						# rawdepth_filter = np.save(path + '/rawdepth_filter.npy')
-						# mask = np.save(path + '/mask.npy')
-						# pre_normal = np.save(path + '/prenormal.npy')
-						# pre_reflect = np.save(path + '/prereflect.npy')
-						# pre_img = np.save(path + '/preimg.npy')
+						normal_ori_i = 0
+						path = DATAPATH + SUB_BRDF + 'lighting'
+						rawdepth_filter = np.load(path + '/rawdepth_filter.npy')
+						mask = np.load(path + '/mask.npy')
+						pre_normal = np.array([np.load(path + '/prenormal.npy')])
+						pre_reflect = np.array([np.load(path + '/prereflect.npy')])
+						pre_img = np.array([np.load(path + '/preimg.npy')])
+
 
 
 						# # test render prediction
-						normal_ori_i, rawdepth_filter, mask, pre_img, pre_normal, pre_reflect = dptest.testRenderPrediction('20180626_204232_0', '500', 316, 0)
+						# normal_ori_i, rawdepth_filter, mask, pre_img, pre_normal, pre_reflect = dptest.testRenderPrediction('20180626_204232_0', '500', 316, 0)
 
 
 					# calibration between kinect and camera
@@ -928,6 +942,8 @@ class DynamicProjection(object):
 							cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
 							cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
 
+							cv.imwrite(path + '/render.png', rgb)
+
 							np.save(path + '/depthback_origin.npy', self.depthback_origin)
 							np.save(path + '/colorback_origin.npy', self.colorback_origin)
 							np.save(path + '/rgbd.npy', rgbd)
@@ -965,13 +981,14 @@ class DynamicProjection(object):
 							if light_color_idx == 0:
 								run = False
 
-				if projection_mode == 0:
+				if projection_mode == -1:
+					rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0])
+				elif projection_mode == 0:
 					self.projectLight()
 				elif projection_mode == 2:
-					self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 1)
-				else:
-					self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 2)
-
+					rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 1)
+				elif projection_mode == 1:
+					rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 2)
 
 			
 

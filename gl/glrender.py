@@ -5,7 +5,7 @@ import numpy as np
 import cv2 as cv
 import PIL.Image as im
 
-PROJECTION_MODE = True
+PROJECTION_MODE = False
 
 # 0: default	
 # 1: shader1(lambert) 	
@@ -106,6 +106,7 @@ class GLRenderer(object):
 
 		self.program = []
 		shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.gs', 'default.fs']]
+		# shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.fs']]
 		self.program.append(LoadProgram(shaderPathList))
 		shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
 		self.program.append(LoadProgram(shaderPathList))
@@ -128,6 +129,41 @@ class GLRenderer(object):
 		self.texture_ = glGetUniformLocation(self.program[2], 'myTexture')
 
 
+	def display(self):
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+		glutSolidSphere(0.2, 30, 30)
+		glutSwapBuffers()
+
+		rgb = glReadPixels(0, 0, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE, outputType = None)
+		cv.imwrite('rgb.png', rgb)
+
+	def drawshape(self):
+
+		glutDisplayFunc(self.display)
+
+		mat_ambient = [0.8, 0.8, 0.8, 1.0]
+		mat_diffuse = [0.8, 0.0, 0.8, 1.0]
+		mat_diffuse = [0.8, 0.8, 0.8, 1.0]
+		mat_specular = [1.0, 0.0, 1.0, 1.0]
+		mat_specular = [1.0, 1.0, 1.0, 1.0]
+		mat_shininess = [50.0]
+
+		light_position = [1.0, 1.0, 1.0, 0.0]
+
+		glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient)
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse)
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular)
+		glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess)
+
+		glLightfv(GL_LIGHT0, GL_POSITION, light_position)
+
+		glEnable(GL_LIGHTING)
+		glEnable(GL_LIGHT0)
+		glDepthFunc(GL_LESS)
+		glEnable(GL_DEPTH_TEST)
+
+		glutMainLoop()
 
 
 	def draw(self, vertices, colors, normals, reflects, uv, mvp, shader = SHADER):
@@ -224,14 +260,24 @@ class GLRenderer(object):
 			glDisableVertexAttribArray(2)
 		if self.shader > 1:
 			glDisableVertexAttribArray(3)
+			glDisableVertexAttribArray(4)
 		glUseProgram(0)
 		glutSwapBuffers()
 
 
-		rgb = glReadPixels(0, 0, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE, outputType = None)
+		rgb = glReadPixels(0, 0, self.width, self.height, GL_BGR, GL_BYTE, outputType = None)
 		z = glReadPixels(0, 0, self.width, self.height, GL_DEPTH_COMPONENT, GL_FLOAT, outputType = None)
-		rgb = np.flip(np.flip(rgb, 0), 1)
+
+
+		# rgb = np.flip(np.flip(rgb, 0), 1)
+
+		h, w = rgb.shape[0], rgb.shape[1]
+		rgb = rgb.reshape([h * w, 3])
+		rgb = rgb.reshape([w, h, 3])
+		rgb = np.flip(rgb, 0)
+
 		z = np.flip(np.flip(z, 0), 1)
+
 
 		return rgb, z
 
