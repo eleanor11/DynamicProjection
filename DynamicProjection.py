@@ -933,6 +933,10 @@ class DynamicProjection(object):
 							np.save(path + '/prenormal.npy', pre_normal[0])
 							np.save(path + '/prereflect.npy', pre_reflect[0])
 							np.save(path + '/preimg.npy', pre_img[0])
+
+							cv.imwrite(path + '/depth.png', depth)
+							cv.imwrite(path + '/color.png', color)
+							cv.imwrite(path + '/cameraColor.png', cameraColor)
 							cv.imwrite(DATAPATH + SUBOUT + 'cameraColorLighting{}.png'.format(self.index), cameraColor)
 						else:
 							cv.imwrite(path + '/depth.png', depth)
