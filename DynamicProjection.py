@@ -38,6 +38,7 @@ SUB_BRDF = 'data/data_body_0629_21/0/'
 
 PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian']
 REALTIME_MODE = 0
+REALTIME_LIMIT = 5
 # 0: predicted, not realtime
 # 1: lighting & predicted
 # 2: lighting & predicted & lambertian
@@ -900,7 +901,7 @@ class DynamicProjection(object):
 					
 
 
-				if time.time() - self.time > 5:
+				if time.time() - self.time > REALTIME_LIMIT:
 
 					# save proj data with projection on body
 					if SAVEALL:
@@ -930,23 +931,25 @@ class DynamicProjection(object):
 						if projection_mode == 0:
 							np.save(path + '/rawdepth_filter.npy', rawdepth_filter)
 							np.save(path + '/mask.npy', mask)
+							np.save(path + '/normal.npy', normal)
+							np.save(path + '/color.npy', color)
 							np.save(path + '/prenormal.npy', pre_normal[0])
 							np.save(path + '/prereflect.npy', pre_reflect[0])
 							np.save(path + '/preimg.npy', pre_img[0])
 
+							cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+							cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
+
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'cameraColorLighting{}.png'.format(self.index), cameraColor)
+							cv.imwrite(DATAPATH + SUBOUT + 'color{}_lighting.png'.format(self.index), color * np.expand_dims(mask, axis = 3))
 						else:
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'cameraColor{}_{}.png'.format(self.index, projection_mode), cameraColor)
-							cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
-							cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
-
-							cv.imwrite(path + '/render.png', rgb)
+							cv.imwrite(DATAPATH + SUBOUT + 'color{}_{}.png'.format(self.index, projection_mode), color * np.expand_dims(mask, axis = 3))
+							cv.imwrite(path + '/render.png', rgb / 0.4)
 
 							np.save(path + '/depthback_origin.npy', self.depthback_origin)
 							np.save(path + '/colorback_origin.npy', self.colorback_origin)

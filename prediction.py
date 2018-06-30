@@ -68,6 +68,20 @@ def readData1(indatapath, dataidx, remove_back = False):
 
 	return normal, color, mask
 
+def readData2():
+	normal = np.load('../DynamicProjectionData/data/data_body_0630_2/0/lighting/normal.npy')
+	mask = np.load('../DynamicProjectionData/data/data_body_0630_2/0/lighting/mask.npy')
+	color = cv.imread('../DynamicProjectionData/data/data_body_0630_2/0/lighting/color.png')
+
+	mask = np.expand_dims(mask, axis = 3)
+	color = color.astype(np.float32) / 255.0
+
+	normal = np.array([normal])
+	mask = np.array([mask])
+	color = np.array([color])
+
+	return normal, color, mask
+
 
 def predict():
 
@@ -96,7 +110,8 @@ def predict():
 	outdatapath = prepareLog(normal_ori_i)
 
 	# normal, color, mask = readData(indatapath, datasize, remove_back)
-	normal, color, mask = readData1(indatapath, npy_list, remove_back)
+	# normal, color, mask = readData1(indatapath, npy_list, remove_back)
+	normal, color, mask = readData2()
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]
@@ -148,7 +163,6 @@ def predict():
 			if normal_ori_i == 0:
 				# normal
 				pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
-				pre_normal[pre_normal > 255] = 255
 				cv.imwrite(outdatapath + '/prenormal{}.png'.format(i), pre_normal[0][..., ::-1])
 
 			# reflectance map
