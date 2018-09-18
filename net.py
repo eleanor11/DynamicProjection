@@ -315,67 +315,73 @@ class DPNet1:
 
 	def SVNet1(self, x, l2 = False):
 
-		# 424 * 512 * 3 -> 424 * 512 * 16
-		W_conv1 = weight_variable([3, 3, 3, 16])
+		# 424 * 512 * 3 -> 424 * 512 * 8
+		W_conv1 = weight_variable([3, 3, 3, 8])
 		h_conv1 = conv2d(x, W_conv1, [1, 1, 1, 1])
 		h_conv1_bn = batch_norm(h_conv1)
 		h_conv1_relu = relu(h_conv1_bn)
 
-		# 424 * 512 * 16 -> 212 * 256 * 32
-		W_conv2 = weight_variable([3, 3, 16, 32])
+		# 424 * 512 * 8 -> 212 * 256 * 8
+		W_conv2 = weight_variable([3, 3, 8, 8])
 		h_conv2 = conv2d(h_conv1_relu, W_conv2, [1, 2, 2, 1])
 		h_conv2_bn = batch_norm(h_conv2)
 		h_conv2_relu = relu(h_conv2_bn)
 
-		# 212 * 256 * 32 -> 106 * 128 * 64
-		W_conv3 = weight_variable([3, 3, 32, 64])
+		# 212 * 256 * 16 -> 106 * 128 * 16
+		W_conv3 = weight_variable([3, 3, 16, 16])
 		h_conv3 = conv2d(h_conv2_relu, W_conv3, [1, 2, 2, 1])
 		h_conv3_bn = batch_norm(h_conv3)
 		h_conv3_relu = relu(h_conv3_bn)
 
-		# 106 * 128 * 64 -> 53 * 64 * 128
-		W_conv4 = weight_variable([3, 3, 64, 128])
+		# 106 * 128 * 16 -> 53 * 64 * 16
+		W_conv4 = weight_variable([3, 3, 16, 16])
 		h_conv4 = conv2d(h_conv3_relu, W_conv4, [1, 2, 2, 1])
 		h_conv4_bn = batch_norm(h_conv4)
 		h_conv4_relu = relu(h_conv4_bn)
 
-		# 53 * 64 * 128 -> 53 * 64 * 128
-		W_conv5 = weight_variable([3, 3, 128, 128])
-		h_conv5 = conv2d(h_conv4_relu, W_conv5, [1, 1, 1, 1])
+		# 53 * 64 * 16 -> 27 * 32 * 32
+		W_conv5 = weight_variable([3, 3, 16, 32])
+		h_conv5 = conv2d(h_conv4_relu, W_conv5, [1, 2, 2, 1])
 		h_conv5_bn = batch_norm(h_conv5)
 		h_conv5_relu = relu(h_conv5_bn)
 
-		# 53 * 64 * 128 -> 106 * 128 * 64
-		W_conv6 = weight_variable([3, 3, 128, 64])
-		h_conv6 = conv2d(upsample(h_conv5_relu, [14, 16]), W_conv6, [1, 1, 1, 1])
+		# 27 * 32 * 32 -> 14 * 16 * 32
+		W_conv6 = weight_variable([3, 3, 32, 32])
+		h_conv6 = conv2d(h_conv5_relu, W_conv6, [1, 2, 2, 1])
 		h_conv6_bn = batch_norm(h_conv6)
 		h_conv6_relu = relu(h_conv6_bn)
-		h_upsample6 = upsample(h_conv6_relu, [27, 32])
 
-		# 106 * 128 * 64 -> 212 * 256 * 32
-		W_conv7 = weight_variable([3, 3, 64, 32])
-		h_conv7 = conv2d(upsample(h_upsample6, [53, 64]), W_conv7, [1, 1, 1, 1])
+		# 14 * 16 * 32 -> 27 * 32 * 64
+		W_conv7 = weight_variable([3, 3, 32, 32])
+		h_conv7 = conv2d(upsample(h_conv6_relu, [27, 32]), W_conv7, [1, 1, 1, 1])
 		h_conv7_bn = batch_norm(h_conv7)
 		h_conv7_relu = relu(h_conv7_bn)
-		h_upsample7 = upsample(h_conv7_relu, [106, 128])
+		h_conv7_concat = tf.concat([h_conv7_relu, h_conv5_relu], 3)
 
-		# 212 * 256 * 32 -> 424 * 512 * 16
-		W_conv8 = weight_variable([3, 3, 32, 16])
-		h_conv8 = conv2d(upsample(h_upsample7, [212, 256]), W_conv8, [1, 1, 1, 1])
+		# 27 * 32 * 64 -> 106 * 128 * 32
+		W_conv8 = weight_variable([3, 3, 64, 16])
+		h_conv8 = conv2d(upsample(h_conv7_concat, [106, 128]), W_conv8, [1, 1, 1, 1])
 		h_conv8_bn = batch_norm(h_conv8)
 		h_conv8_relu = relu(h_conv8_bn)
-		h_upsample8 = upsample(h_conv8_relu, [424, 512])
+		h_conv8_concat = tf.concat([h_conv8_relu, h_conv3_relu], 3)
 
-		# 424 * 512 * 16 -> 424 * 512 * 3
-		W_conv9 = weight_variable([3, 3, 16, 3])
-		h_conv9 = conv2d(h_upsample8, W_conv9, [1, 1, 1, 1])
+		# 106 * 128 * 32 -> 424 * 512 * 8
+		W_conv9 = weight_variable([3, 3, 32, 8])
+		h_conv9 = conv2d(upsample(h_conv8_concat, [424, 512]), W_conv9, [1, 1, 1, 1])
 		h_conv9_bn = batch_norm(h_conv9)
 		h_conv9_relu = relu(h_conv9_bn)
+		h_conv9_concat = tf.concat([h_conv9_relu, h_conv1_relu], 3)
+
+		# 424 * 512 * 16 -> 424 * 512 * 3
+		W_conv10 = weight_variable([3, 3, 16, 3])
+		h_conv10 = conv2d(h_conv9_concat, W_conv10, [1, 1, 1, 1])
+		h_conv10_bn = batch_norm(h_conv10)
+		h_conv10_relu = relu(h_conv10_bn)
 
 		if l2:
-			return l2_norm(h_conv9_relu, 3)
+			return l2_norm(h_conv10_relu, 3)
 		else:
-			return h_conv9_relu
+			return h_conv10_relu
 
 
 
