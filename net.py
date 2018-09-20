@@ -432,8 +432,8 @@ class DPNet1:
 
 		if self.normal_ori == 0:
 			# normal = self.SVNet(self.color, l2 = True)
-			normal = self.SVNet1(self.color, l2 = True)
-			# normal = self.PSNet(self.color)
+			# normal = self.SVNet1(self.color, l2 = True)
+			normal = self.PSNet(self.color)
 		else: 
 			normal = self.normal
 
