@@ -199,6 +199,7 @@ class DPNet1:
 		self.normal_ori = normal_ori
 		self.lightdir = tf.constant(lightdir)
 		self.learning_rate = 1e-2
+		self.oc = 16
 
 	def FCNet(self, x):
 
@@ -328,7 +329,7 @@ class DPNet1:
 		h_conv2_relu = relu(h_conv2_bn)
 
 		# 212 * 256 * 16 -> 106 * 128 * 16
-		W_conv3 = weight_variable([3, 3, 16, 16])
+		W_conv3 = weight_variable([3, 3, 8, 16])
 		h_conv3 = conv2d(h_conv2_relu, W_conv3, [1, 2, 2, 1])
 		h_conv3_bn = batch_norm(h_conv3)
 		h_conv3_relu = relu(h_conv3_bn)
@@ -376,13 +377,42 @@ class DPNet1:
 		W_conv10 = weight_variable([3, 3, 16, 3])
 		h_conv10 = conv2d(h_conv9_concat, W_conv10, [1, 1, 1, 1])
 		h_conv10_bn = batch_norm(h_conv10)
-		h_conv10_relu = relu(h_conv10_bn)
 
 		if l2:
-			return l2_norm(h_conv10_relu, 3)
+			return l2_norm(h_conv10_bn, 3)
 		else:
-			return h_conv10_relu
+			return relu(h_conv10_bn)
 
+	def PSNet(self, x):
+		W_conv1 = weight_variable([3, 3, 3, self.oc])
+		h_conv1 = conv2d(x, W_conv1, [1, 1, 1, 1])
+		h_conv1_bn = batch_norm(h_conv1)
+		h_conv1_relu = relu(h_conv1_bn)
+
+		W_conv2 = weight_variable([3, 3, self.oc, self.oc])
+		h_conv2 = conv2d(h_conv1_relu, W_conv2, [1, 1, 1, 1])
+		h_conv2_bn = batch_norm(h_conv2)
+		h_conv2_relu = relu(h_conv2_bn)
+
+		W_conv3 = weight_variable([3, 3, self.oc, self.oc])
+		h_conv3 = conv2d(h_conv2_relu, W_conv3, [1, 1, 1, 1])
+		h_conv3_bn = batch_norm(h_conv3)
+		h_conv3_relu = relu(h_conv3_bn)
+
+		W_feature = weight_variable([3, 3, self.oc, int(self.oc / 2)])
+		h_feature = conv2d(h_conv2_relu, W_feature, [1, 1, 1, 1])
+		h_feature_bn = batch_norm(h_feature)
+		h_feature_relu = relu(h_feature_bn)
+
+		# 0: train, 1: self.normal
+		if self.normal_ori == 1:
+			return h_feature_relu, self.normal, 0
+
+		W_conv4 = weight_variable([3, 3, self.oc, 3])
+		h_conv4 = conv2d(h_conv3_relu, W_conv4, [1, 1, 1, 1])
+		h_l2_norm = l2_norm(h_conv4, 3)
+
+		return h_l2_norm
 
 
 	def net(self, mode = 'training'):
@@ -398,10 +428,12 @@ class DPNet1:
 		# rho_s, alpha = params[:, 0: 3], params[:, 3: 6]
 
 		# rho_d = self.SVNet(self.color)
+		rho_d = self.SVNet1(self.color)
 
 		if self.normal_ori == 0:
 			# normal = self.SVNet(self.color, l2 = True)
 			normal = self.SVNet1(self.color, l2 = True)
+			# normal = self.PSNet(self.color)
 		else: 
 			normal = self.normal
 
@@ -409,16 +441,16 @@ class DPNet1:
 		# viewdir = tf.constant([0.0, 0.0, 1.0])
 		# halfdir = (viewdir + self.lightdir) / tf.reduce_sum((viewdir + self.lightdir) ** 2)
 
-		# mat_size = self.size * self.height * self.width
-		# mat_shape = [self.size, self.height, self.width, 3, 1]
-		# lightdir_mat = tf.reshape(tf.tile(self.lightdir, [mat_size]), mat_shape)
+		mat_size = self.size * self.height * self.width
+		mat_shape = [self.size, self.height, self.width, 3, 1]
+		lightdir_mat = tf.reshape(tf.tile(self.lightdir, [mat_size]), mat_shape)
 		# viewdir_mat = tf.reshape(tf.tile(viewdir, [mat_size]), mat_shape)
 		# halfdir_mat = tf.reshape(tf.tile(halfdir, [mat_size]), mat_shape)
 
-		# normal_mat = tf.expand_dims(normal, 3)
+		normal_mat = tf.expand_dims(normal, 3)
 
 		# # M * H * W * 1
-		# nxl = tf.reshape(tf.matmul(normal_mat, lightdir_mat), [self.size, self.height, self.width, 1])
+		nxl = tf.reshape(tf.matmul(normal_mat, lightdir_mat), [self.size, self.height, self.width, 1])
 		# nxv = tf.reshape(tf.matmul(normal_mat, viewdir_mat), [self.size, self.height, self.width, 1])
 		# cos_delta = tf.reshape(tf.matmul(normal_mat, halfdir_mat), [self.size, self.height, self.width, 1])
 		# tan2_delta = tf.tan(tf.acos(cos_delta)) ** 2
@@ -436,15 +468,16 @@ class DPNet1:
 		# f2 = tmp1 * (tf.exp(-tmp2))
 
 		# I_ = f1 + f2
-		# # I_ = rho_d * relu(nxl)
+		I_ = rho_d * relu(nxl)
 
 
 		mask_sum = tf.reduce_sum(self.mask) * 3
 
-		# l1 = tf.reduce_sum(self.mask * tf.abs(self.color - I_)) / mask_sum
-		l2 = tf.reduce_sum(self.mask * tf.abs(self.normal - normal)) / mask_sum
-		# loss = l1 + l2
-		loss = l2
+		l1 = tf.reduce_sum(self.mask * tf.abs(self.color - I_)) / mask_sum
+		# l2 = tf.reduce_sum(self.mask * tf.abs(self.normal - normal)) / mask_sum
+		l2 = tf.reduce_sum(self.mask * (self.normal - normal) ** 2) / mask_sum
+		loss = l1 + l2
+		# loss = l2
 		# loss = l1 + 1 / l2 ** 0.5
 		train_step = tf.train.GradientDescentOptimizer(self.learning_rate, name = 'train_step').minimize(loss)
 
@@ -453,13 +486,15 @@ class DPNet1:
 		# accuracy_3 = tf.reduce_sum(tf.cast(tf.less(tf.abs(self.color - I_), delta), tf.float32) * self.mask) / mask_sum
 
 		normalm = normal * self.mask
-		# Im_ = I_ * self.mask
+		Im_ = I_ * self.mask
 
 		# rho_d = rho_d * self.mask
 
-		return train_step, loss, normalm
+		# return train_step, loss
+		return train_step, loss, l1, l2, normalm, Im_
 
 		# if mode == 'training':
+		# 	return train_step, accuracy, accuracy_3, loss, l1, l2, normalm, Im_, rho_d, rho_s, alpha, f1, f2
 		# 	return train_step, accuracy, accuracy_3, loss, l1, l2, normalm, Im_, rho_d, rho_s, alpha, f1, f2
 		# elif mode == 'testing':
 		# 	return accuracy, accuracy_3, loss, normalm, Im_

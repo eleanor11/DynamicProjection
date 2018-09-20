@@ -498,7 +498,7 @@ def train11():
 
 	with tf.Session() as sess:
 
-		train_step, loss_, normal_ = model.net()
+		train_step, loss_, l1_, l2_, normal_, I_ = model.net()
 
 		if start_iter == 0:
 			sess.run(tf.global_variables_initializer())
@@ -512,18 +512,24 @@ def train11():
 
 			if i % 100 == 0 or i == 19999:
 				# train accuracy
-				train_loss, train_nn = sess.run(
-					[loss_, normal_], 
+				train_loss, l1, l2, train_nn, train_ii = sess.run(
+					[loss_, l1_, l2_, normal_, I_], 
 					feed_dict = {
 						model.normal: train_normal[idx: idx + batch_size], 
 						model.color: train_color[idx: idx + batch_size], 
 						model.mask: train_mask[idx: idx + batch_size], 
 						model.keep_prob: 0.5})
-				logging.info("{}: train step: {}, \tloss: {:.16f}".format(
+				logging.info("{}: train step: {}, \tloss: {:.16f}, \t{:.16f}, \t{:.16f}".format(
 					time.strftime(r"%Y%m%d_%H%M%S", time.localtime()), 
 					i, 
-					train_loss))
-				if i % 100 == 0 or i == 19999:
+					train_loss, l1, l2))
+				if i % 200 == 0 or i == 19999:
+					train_ii[train_ii < 0] = 0
+					train_ii[train_ii > 1] = 1
+					train_ii = (train_ii * 255).astype(np.uint8)
+					for j in range(batch_size):
+						cv.imwrite(outdatapath + '/preimg{}_{}.png'.format(i, j), train_ii[j])
+
 					train_nn = ((train_nn + 1) / 2 * 255).astype(np.uint8)
 					train_nn[train_nn > 255] = 255
 					for j in range(batch_size):
@@ -531,8 +537,8 @@ def train11():
 						# print(train_nn[j])
 
 
-				print("step {}, loss {}".format(
-					i, train_loss))
+				print("step {}, loss {} {} {}".format(
+					i, train_loss, l1, l2))
 
 				# # test accuracy
 				# test_idx = 0
