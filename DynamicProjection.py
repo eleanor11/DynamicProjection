@@ -17,33 +17,21 @@ import params
 
 DATAPATH = '../DynamicProjectionData/'
 
-# 0: record new background and capture new data by Kinect
-# 1: use background data, but capture new data by Kinect
-# 2: use off-line data for all
-MODE = 2
-SUBIN = params.SUBIN
+MODE = params.MODE
 
 SAVE = False
-SUB = params.SUB
-
 SAVEALL = False
+
+SUBIN = params.SUBIN
+SUBALL = params.SUBALL
 SUBOUT = params.SUBOUT
 
-# 0: no reconstruction
-# 1: reconstruction of real scene
-# 2: use off-line data (rawdepth, mask, pre_normal, pre_reflect, pre_img)
-RECONSTRUCTION_MODE = 2
+RECONSTRUCTION_MODE = params.RECONSTRUCTION_MODE
 SUB_BRDF = params.SUB_BRDF
 
-# 0: predicted, not realtime
-# 1: lighting & predicted
-# 2: lighting & predicted & lambertian
-# 3: predicted & lambertian, change illumination
-# 4: lighting & predicted & lambertian & color lighting, change light color 3 * 256
-# 5: lighting & predicted & lambertian & color lighting, change illumination
-REALTIME_MODE = 0
-REALTIME_LIMIT = 5
-PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian']
+REALTIME_MODE = params.REALTIME_MODE
+REALTIME_LIMIT = params.REALTIME_LIMIT
+PROJECTION_TYPE = params.PROJECTION_TYPE
 
 LightPositions = params.LightPositions
 LightColors = params.LightColors
@@ -190,7 +178,7 @@ class DynamicProjection(object):
 			if MODE < 2: 
 				rgbd = self.d2c(rawdepth, rawcolor)
 				if SAVE:
-					np.save(DATAPATH + SUB + "rgbd.npy", rgbd)
+					np.save(DATAPATH + SUBOUT + "rgbd.npy", rgbd)
 			else: 
 				rgbd = np.load(DATAPATH + SUBIN + "rgbd.npy")
 				rgbd = rgbd.reshape([424 * 512, 4])
@@ -201,7 +189,7 @@ class DynamicProjection(object):
 			if MODE < 2:
 				rgbd = self.c2d(rawdepth, rawcolor)
 				if SAVE: 
-					np.save(DATAPATH + SUB + "rgbd.npy", rgbd)
+					np.save(DATAPATH + SUBOUT + "rgbd.npy", rgbd)
 			else: 
 				rgbd = np.load(DATAPATH + SUBIN + "rgbd.npy")
 				rgbd = rgbd.reshape([424 * 512, 4])
@@ -255,8 +243,8 @@ class DynamicProjection(object):
 			self.colorback = back[:, :, 0: 3]
 
 			if SAVE:
-				np.save(DATAPATH + SUB + 'depthback_origin.npy', self.depthback_origin)
-				np.save(DATAPATH + SUB + 'colorback_origin.npy', self.colorback_origin)
+				np.save(DATAPATH + SUBOUT + 'depthback_origin.npy', self.depthback_origin)
+				np.save(DATAPATH + SUBOUT + 'colorback_origin.npy', self.colorback_origin)
 
 		else: 
 
@@ -470,16 +458,16 @@ class DynamicProjection(object):
 			rawinfrared = self.kinect.get_last_infrared_frame()
 
 			if save:
-				np.save(DATAPATH + SUB + 'rawdepth.npy', rawdepth)
-				np.save(DATAPATH + SUB + 'rawcolor.npy', rawcolor)
-				np.save(DATAPATH + SUB + 'rawinfrared.npy', rawinfrared)
+				np.save(DATAPATH + SUBOUT + 'rawdepth.npy', rawdepth)
+				np.save(DATAPATH + SUBOUT + 'rawcolor.npy', rawcolor)
+				np.save(DATAPATH + SUBOUT + 'rawinfrared.npy', rawinfrared)
 
 			flag = True
 
 
 		ret, cameraColor = self.cap.read()
 		if save:
-			np.save(DATAPATH + SUB + 'cameraColor.npy', cameraColor)
+			np.save(DATAPATH + SUBOUT + 'cameraColor.npy', cameraColor)
 
 
 		return flag, rawdepth, rawcolor, rawinfrared, cameraColor
@@ -611,7 +599,7 @@ class DynamicProjection(object):
 				if MODE < 2:
 					ret, cameraColor = self.cap.read()
 				else:
-					cameraColor = np.load(DATAPATH + SUB + 'cameraColor.npy')
+					cameraColor = np.load(DATAPATH + SUBOUT + 'cameraColor.npy')
 					
 				# cv.imshow('color', cameraColor)
 				cv.imwrite('{}capture_color/capture_{}_{}.png'.format(DATAPATH, c, idx % 256), cameraColor)
@@ -791,11 +779,13 @@ class DynamicProjection(object):
 			if ch == 27:
 				break
 
+			# get data
 			if MODE < 2:
 				flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(SAVE)  
 			else:
 				flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawData()
 
+			# if data got
 			if flag:
 
 				rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
@@ -803,10 +793,10 @@ class DynamicProjection(object):
 				color = rgbd[:, :, 0: 3]
 				
 				if SAVE:
-					cv.imwrite(DATAPATH + SUB + 'depth.png', depth)
-					cv.imwrite(DATAPATH + SUB + 'color.png', color)
-					cv.imwrite(DATAPATH + SUB + 'cameraColor.png', cameraColor)
-					np.save(DATAPATH + SUB + 'depth_part.npy', depth_part)
+					cv.imwrite(DATAPATH + SUBOUT + 'depth.png', depth)
+					cv.imwrite(DATAPATH + SUBOUT + 'color.png', color)
+					cv.imwrite(DATAPATH + SUBOUT + 'cameraColor.png', cameraColor)
+					np.save(DATAPATH + SUBOUT + 'depth_part.npy', depth_part)
 
 				# cv.imshow('depth', depth)
 				# cv.imshow('color', color)
@@ -878,7 +868,7 @@ class DynamicProjection(object):
 					# cali = self.calibrateKinectCamera(R, T, base_p_irs, cameraColor, rawdepth, rawinfrared)
 					# cv.imshow('cali', cali)
 					# if SAVE:
-					# 	np.save(DATAPATH + SUB + 'cali.npy', cali)
+					# 	np.save(DATAPATH + SUBOUT + 'cali.npy', cali)
 
 					# TODO: color compensation
 
@@ -893,38 +883,38 @@ class DynamicProjection(object):
 				# corres[mask] = pre_img[0][mask] * 255
 				# cv.imshow('corres', corres)
 				if SAVE:
-					np.save(DATAPATH + SUB + 'corres.npy', corres)
+					np.save(DATAPATH + SUBOUT + 'corres.npy', corres)
 
 
 					# # test corres
 					# corres = dptest.testCorres(corres, mask)
 
-				# cv.imwrite(DATAPATH + SUB + 'color_m.png', color * np.expand_dims(mask, axis = 3))
+				# cv.imwrite(DATAPATH + SUBOUT + 'color_m.png', color * np.expand_dims(mask, axis = 3))
 				
 
 				if time.time() - self.time > REALTIME_LIMIT:
 
 					# save proj data with projection on body
 					if SAVEALL:
-						if not os.path.isdir(DATAPATH + SUBOUT):
-							os.mkdir(DATAPATH + SUBOUT)
+						if not os.path.isdir(DATAPATH + SUBALL):
+							os.mkdir(DATAPATH + SUBALL)
 
 						makedir = REALTIME_MODE == 0 or projection_mode == 0
 						makedir = makedir or (REALTIME_MODE == 3 and projection_mode == 1)
 						makedir = makedir or (REALTIME_MODE == 4 and projection_mode == 1)
 						makedir = makedir or (REALTIME_MODE == 5 and projection_mode == 1)
 						if makedir:
-							path = '{}{}'.format(DATAPATH + SUBOUT, self.index)
+							path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 							if REALTIME_MODE == 4:
 								path += '_{}'.format(light_ratio / 10.0)
 							while os.path.isdir(path):
 								self.index += 1
-								path = '{}{}'.format(DATAPATH + SUBOUT, self.index)
+								path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 								if REALTIME_MODE == 4:
 									path += '_{}'.format(light_ratio / 10.0)
 							os.mkdir(path)
 
-						path = '{}{}'.format(DATAPATH + SUBOUT, self.index)
+						path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 						if REALTIME_MODE == 4:
 							path += '_{}'.format(light_ratio / 10.0)
 						if projection_mode == 0:
@@ -960,12 +950,12 @@ class DynamicProjection(object):
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'color{}_0lighting.png'.format(self.index), color * np.expand_dims(mask, axis = 3))
+							cv.imwrite(DATAPATH + SUBALL + 'color{}_0lighting.png'.format(self.index), color * np.expand_dims(mask, axis = 3))
 						else:
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
 							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBOUT + 'color{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode]), color * np.expand_dims(mask, axis = 3))
+							cv.imwrite(DATAPATH + SUBALL + 'color{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode]), color * np.expand_dims(mask, axis = 3))
 							rrgb = (rgb / (light_ratio / 10.0))
 							rrgb[rrgb > 255] = 255
 							cv.imwrite(path + '/render.png', rrgb.astype(np.uint8))
@@ -978,6 +968,9 @@ class DynamicProjection(object):
 							np.save(path + '/rawdepth.npy', rawdepth)
 							np.save(path + '/rawcolor.npy', rawcolor)
 							np.save(path + '/rawinfrared.npy', rawinfrared)
+
+
+					# project rendered result
 
 					if REALTIME_MODE == 3:
 						projection_mode = projection_mode % 2 + 1
@@ -1054,15 +1047,15 @@ class DynamicProjection(object):
 				if run:
 					if projection_mode == -1:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0])
-					elif projection_mode == 3:
-						rgb, z = self.projectLight(self.render.lightColor, self.render.lightRatio)
 					elif projection_mode == 0:
 						self.projectLight()
-					elif projection_mode == 2:
-						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 1)
 					elif projection_mode == 1:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 2)
-
+					elif projection_mode == 2:
+						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 1)
+					elif projection_mode == 3:
+						rgb, z = self.projectLight(self.render.lightColor, self.render.lightRatio)
+					
 			
 
 
