@@ -20,7 +20,7 @@ DATAPATH = '../DynamicProjectionData/'
 MODE = params.MODE
 
 SAVE = False
-SAVEALL = False
+SAVEALL = True
 
 SUBIN = params.SUBIN
 SUBALL = params.SUBALL
@@ -751,12 +751,15 @@ class DynamicProjection(object):
 			
 			self.time = time.time()
 
+			print(self.index)
+
 			# 0: lighting,  
 			# 1: virtual scene with learned BRDF, 
 			# 2: virtual scene with lambertian BRDF,
 			# 3: casual
 			if REALTIME_MODE > 0:
 				projection_mode = 0
+				print('project ' + PROJECTION_TYPE[projection_mode])
 			else:
 				projection_mode = -1
 
@@ -921,13 +924,13 @@ class DynamicProjection(object):
 							print('record lighting...')
 							path += '/lighting'
 						elif projection_mode == 1:
-							print('record predicted')
+							print('record predicted...')
 							path += '/predicted'
 						elif projection_mode == 2:
-							print('record lambertian')
+							print('record lambertian...')
 							path += '/lambertian'
 						elif projection_mode == 3:
-							print('record color lighting')
+							print('record color lighting...')
 							path += '/colorlighting'
 						if projection_mode >= 0:
 							os.mkdir(path)
@@ -938,13 +941,13 @@ class DynamicProjection(object):
 							np.save(path + '/color.npy', color)
 
 							if RECONSTRUCTION_MODE > 0:
-								np.save(path + '/normal.npy', normal)
+								# np.save(path + '/normal.npy', normal)
 								np.save(path + '/prenormal.npy', pre_normal[0])
 								np.save(path + '/prereflect.npy', pre_reflect[0])
 								np.save(path + '/preimg.npy', pre_img[0])
 
-								cv.imwrite(path + '/normal.png', ((normal[..., ::-1] + 1) / 2 * 255).astype(np.uint8))
-								cv.imwrite(path + '/prenormal.png', ((pre_normal_o[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+								# cv.imwrite(path + '/normal.png', ((normal[..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+								cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
 								cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
 
 							cv.imwrite(path + '/depth.png', depth)
@@ -970,8 +973,7 @@ class DynamicProjection(object):
 							np.save(path + '/rawinfrared.npy', rawinfrared)
 
 
-					# project rendered result
-
+					# change projection_mode
 					if REALTIME_MODE == 3:
 						projection_mode = projection_mode % 2 + 1
 						if projection_mode == 1:
@@ -983,7 +985,7 @@ class DynamicProjection(object):
 						if projection_mode == 1:
 							self.index += 1
 							print(self.index)
-						print('project' + PROJECTION_TYPE[projection_mode])
+						print('project ' + PROJECTION_TYPE[projection_mode])
 					elif REALTIME_MODE == 5:
 						projection_mode = projection_mode % 3 + 1
 						if projection_mode == 3 and light_position_idx != 1:
@@ -991,7 +993,7 @@ class DynamicProjection(object):
 						if projection_mode == 1:
 							self.index += 1
 							print(self.index)
-						print('project' + PROJECTION_TYPE[projection_mode])
+						print('project ' + PROJECTION_TYPE[projection_mode])
 
 					elif REALTIME_MODE > 0:
 						projection_mode = (projection_mode + 1) % (REALTIME_MODE + 1)
@@ -1009,8 +1011,8 @@ class DynamicProjection(object):
 					if REALTIME_MODE == 3 and projection_mode == 1:
 						self.render.lightPosition = LightPositions[light_position_idx]
 						self.render.lightColor = LightColors[light_color_idx]
-						print('light_position_idx ', light_position_idx)
-						print('light_color_idx ', light_color_idx)
+						# print('light_position_idx ', light_position_idx)
+						# print('light_color_idx ', light_color_idx)
 						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
 						if light_position_idx == 0:
 							light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
@@ -1018,6 +1020,8 @@ class DynamicProjection(object):
 								run = False
 					elif REALTIME_MODE == 4 and projection_mode == 1:
 						# 33 * 3 = 99
+						# r: 8, 16, ..., 248, 255
+						# g, b: 0, 8, 16, ..., 248, 255
 						value = self.index % 33
 						channel = int(self.index / 33) % 3
 						color = np.array([0.0, 0.0, 0.0])
@@ -1045,6 +1049,7 @@ class DynamicProjection(object):
 								run = False
 
 				if run:
+					# project rendered result
 					if projection_mode == -1:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0])
 					elif projection_mode == 0:

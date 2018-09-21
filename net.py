@@ -428,12 +428,13 @@ class DPNet1:
 		# rho_s, alpha = params[:, 0: 3], params[:, 3: 6]
 
 		# rho_d = self.SVNet(self.color)
-		rho_d = self.SVNet1(self.color)
+		# rho_d = self.SVNet1(self.color)
+		rho_d = self.PSNet(self.color)
 
 		if self.normal_ori == 0:
 			# normal = self.SVNet(self.color, l2 = True)
-			# normal = self.SVNet1(self.color, l2 = True)
-			normal = self.PSNet(self.color)
+			normal = self.SVNet1(self.color, l2 = True)
+			# normal = self.PSNet(self.color)
 		else: 
 			normal = self.normal
 

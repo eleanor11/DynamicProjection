@@ -1,3 +1,5 @@
+import numpy as np
+
 
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
@@ -11,9 +13,9 @@ MODE = 2
 # SUBIN = 'data/data_pig_0629_origin/'
 # SUBIN = 'data/data_body_0629_origin/'
 # SUBIN = 'data/data_body_0629_2_origin/'
-# SUBIN = 'data/data_pig_0629_2_origin/'
+SUBIN = 'data/data_pig_0629_2_origin/'
 # SUBIN = 'data/data_body_empty_origin/'
-SUBIN = 'data/data_pig_0630_origin/'
+# SUBIN = 'data/data_pig_0630_origin/'
 
 # ------------------------------------------------
 
@@ -36,7 +38,8 @@ SUBOUT = 'data/data_bear/'
 # SUBALL = 'data/data_pig_0630_6/'
 # SUBALL = 'data/data_bear_0630_1/'
 # SUBALL = 'data/data_bear_0630_2/'
-SUBALL = 'data/data_bear_0630_3/'
+# SUBALL = 'data/data_bear_0630_3/'
+SUBALL = 'data/test/'
 
 # ------------------------------------------------
 
@@ -66,7 +69,7 @@ TEXTUREFILE = ''
 # 3: predicted & lambertian, change illumination
 # 4: lighting & predicted & lambertian & color lighting, change light color 3 * 256
 # 5: lighting & predicted & lambertian & color lighting, change illumination
-REALTIME_MODE = 0
+REALTIME_MODE = 5
 
 REALTIME_LIMIT = 5
 PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting']
