@@ -20,7 +20,7 @@ DATAPATH = '../DynamicProjectionData/'
 MODE = params.MODE
 
 SAVE = False
-SAVEALL = True
+SAVEALL = False
 
 SUBIN = params.SUBIN
 SUBALL = params.SUBALL
@@ -32,6 +32,7 @@ SUB_BRDF = params.SUB_BRDF
 REALTIME_MODE = params.REALTIME_MODE
 REALTIME_LIMIT = params.REALTIME_LIMIT
 PROJECTION_TYPE = params.PROJECTION_TYPE
+JOINT_INDEX = PyKinectV2.JointType_HandRight
 
 LightPositions = params.LightPositions
 LightColors = params.LightColors
@@ -46,7 +47,7 @@ class DynamicProjection(object):
 		self.index = 0
 
 		# init kinect
-		self.kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Depth | PyKinectV2.FrameSourceTypes_Color | PyKinectV2.FrameSourceTypes_Infrared)
+		self.kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Depth | PyKinectV2.FrameSourceTypes_Color | PyKinectV2.FrameSourceTypes_Infrared | PyKinectV2.FrameSourceTypes_Body)
 
 		self.znear = 0.2
 		self.zfar = 3.0
@@ -59,17 +60,17 @@ class DynamicProjection(object):
 		self.fy = 365.753
 		
 		self.t = [ 
-            -7.517246646433162,
-			0.43210832349956646,
-			-3.6190140901470293,
-			0.9668409943035755,
-			-0.15296828300679596,
-			10.71404717765025,
-			-4.1966722473037015,
-			1.5030783569335278,
-			-0.07908378457766652,
-			0.996679151785893,
-			-6.519932108201286
+            -11.495718910926238,
+			0.6570397800813046,
+			-5.347651819418954,
+			0.9752726402352158,
+			-0.15326796015659322,
+			16.5011504539179,
+			-6.240384473681302,
+			1.964445104258143,
+			-0.013858092743244945,
+			1.5934877236162894,
+			-9.82974721962928
 
 		]
 
@@ -199,14 +200,14 @@ class DynamicProjection(object):
 		# with all the objects in it
 		# black (0) means background
 		rgbd[:, 3] = self.depth2gray(rawdepth)
+		rgbd = rgbd.reshape([424, 512, 4])
 
 		# trun raw depth into gray image
 		# remove the background and other stable object
 		depth_part = self.depth2gray(rawdepth, True)
-
-
-		rgbd = rgbd.reshape([424, 512, 4])
 		depth_part = depth_part.reshape([424, 512])
+
+
 		return rgbd, depth_part
 
 
@@ -220,7 +221,7 @@ class DynamicProjection(object):
 
 			for i in range(num_frame):
 				while 1:
-					x = i
+					print(i)
 					if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame():
 						depth_frame = self.kinect.get_last_depth_frame()
 						color_frame = self.kinect.get_last_color_frame()
@@ -312,16 +313,24 @@ class DynamicProjection(object):
 		return vertex_normals
 
 
+	def uv2project(self, uv, depth):
+		Z = depth / 1000
+		X = (511 - uv[0] - self.cx) * Z / self.fx
+		Y = (self.cy - uv[1]) * Z / self.fy
+
+		t = self.t
+		denom = t[8] * X + t[9] * Y + t[10] * Z + 1
+		x = (t[0] * X + t[1] * Y + t[2] * Z + t[3]) / denom * 2 - 1
+		y = 1 - (t[4] * X + t[5] * Y + t[6] * Z + t[7]) / denom * 2
+
+		project_position = [x, y, 1.0]
+
+		return project_position
+
+
 	def projectLight(self, color = np.array([1, 1, 1]), ratio = 0.25):
 
-		vertices = np.array([[-1, -1, 0], [3, -1, 0], [-1, 3, 0]], np.float32)
-		# vertices = np.array([[-1, -1, -15], [3, -1, -15], [-1, 3, -15]], np.float32)
-		# vertices = np.array([[0, 0, -5], [1, 0, -5], [0, 1, -5]], np.float32)
-
-		# lp = self.render.lightPosition
-		# vertices = np.concatenate([[lp], [lp + np.array([0.02, 0.0, 0.0])], [lp + np.array([0.0, 0.02, 0.0])]], 0).astype(np.float32)
-
-				
+		vertices = np.array([[-1, -1, 0], [3, -1, 0], [-1, 3, 0]], np.float32)	
 		colors = (np.ones([3, 3], np.float32) * color * ratio).astype(np.float32)
 		# print(colors)
 
@@ -465,9 +474,11 @@ class DynamicProjection(object):
 		rawdepth = np.load(DATAPATH + SUBIN + 'rawdepth.npy')
 		rawcolor = np.load(DATAPATH + SUBIN + 'rawcolor.npy')
 		rawinfrared = np.load(DATAPATH + SUBIN + 'rawinfrared.npy')
+		joint_states = np.load(DATAPATH + SUBIN + 'joint_states.npy')
+		joint_points = np.load(DATAPATH + SUBIN + 'joint_points.npy')
 		cameraColor = np.load(DATAPATH + SUBIN + 'cameraColor.npy')
 
-		return True, rawdepth, rawcolor, rawinfrared, cameraColor
+		return True, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points
 
 
 	def getRawDataWithKinect(self, save):
@@ -479,16 +490,40 @@ class DynamicProjection(object):
 		rawinfrared = np.zeros((424 * 512, 1))
 		cameraColor = np.zeros((1280 * 960 * 3))
 
+		joint_states = np.zeros(25, np.uint8)
+		joint_points = 0 - np.ones([25, 2], np.int32)
+
 		if self.kinect.has_new_depth_frame() and self.kinect.has_new_color_frame() and self.kinect.has_new_infrared_frame():
 			
 			rawdepth = self.kinect.get_last_depth_frame()
 			rawcolor = self.kinect.get_last_color_frame()
 			rawinfrared = self.kinect.get_last_infrared_frame()
 
+			if self.kinect.has_new_body_frame():
+				bodies = self.kinect.get_last_body_frame()
+				joints = None
+
+				if not bodies == None:
+					for i in range(self.kinect.max_body_count):
+						body = bodies.bodies[i]
+						if not body.is_tracked:
+							continue
+						joints = body.joints
+
+					if joints:
+						joint_points_ = self.kinect.body_joints_to_depth_space(joints)
+						for i in range(25):
+							joint_states[i] = joints[i].TrackingState
+							if not joint_states[i] == PyKinectV2.TrackingState_NotTracked:
+								joint_points[i] = np.array([joint_points_[i].x, joint_points_[i].y]).astype(np.int32)
+
 			if save:
 				np.save(DATAPATH + SUBOUT + 'rawdepth.npy', rawdepth)
 				np.save(DATAPATH + SUBOUT + 'rawcolor.npy', rawcolor)
 				np.save(DATAPATH + SUBOUT + 'rawinfrared.npy', rawinfrared)
+
+				np.save(DATAPATH + SUBOUT + 'joint_states.npy', joint_states)
+				np.save(DATAPATH + SUBOUT + 'joint_points.npy', joint_points)
 
 			flag = True
 
@@ -498,7 +533,7 @@ class DynamicProjection(object):
 			np.save(DATAPATH + SUBOUT + 'cameraColor.npy', cameraColor)
 
 
-		return flag, rawdepth, rawcolor, rawinfrared, cameraColor
+		return flag, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points
 
 	def calculateRT(self, sub = '_ll/'):
 		path = '../DynamicProjectionData/capture_images'
@@ -813,9 +848,9 @@ class DynamicProjection(object):
 
 			# get data
 			if MODE < 2:
-				flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(SAVE)  
+				flag, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points = self.getRawDataWithKinect(SAVE)  
 			else:
-				flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawData()
+				flag, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points = self.getRawData()
 
 			# if data got
 			if flag:
@@ -1034,7 +1069,13 @@ class DynamicProjection(object):
 						self.index += 1
 						print(self.index)
 						print('project ' + PROJECTION_TYPE[projection_mode])
-						print('point light position: {} {}'.format(light_position_idx, LightPositions[light_position_idx]))
+						print('point light position: {}'.format(LightPositions[light_position_idx]))
+					elif REALTIME_MODE == 7:
+						projection_mode = abs(projection_mode - 4)
+						if projection_mode == 0:
+							self.index += 1
+							print(self.index)
+						print('project ' + PROJECTION_TYPE[projection_mode])
 
 					elif REALTIME_MODE > 0:
 						projection_mode = (projection_mode + 1) % (REALTIME_MODE + 1)
@@ -1077,7 +1118,6 @@ class DynamicProjection(object):
 							self.render.lightRatio = light_ratio / 10.0
 							if light_ratio == 0:
 								run_next = False
-								print('end')
 					elif REALTIME_MODE == 5 and projection_mode == 1:
 						self.render.lightPosition = LightPositions[light_position_idx]
 						self.render.lightColor = LightColors[light_color_idx]
@@ -1094,7 +1134,11 @@ class DynamicProjection(object):
 						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
 						if light_position_idx == 0:
 							run_next = False
-							print('end')
+
+					elif REALTIME_MODE == 7 and projection_mode == 4:
+						if not joint_states[JOINT_INDEX] == PyKinectV2.TrackingState_NotTracked:
+							[x, y] = joint_points[JOINT_INDEX]
+							self.render.lightPosition = self.uv2project(joint_points[JOINT_INDEX], rawdepth[y * 512 + 511 - x])
 
 				if run:
 					# project rendered result
@@ -1110,6 +1154,8 @@ class DynamicProjection(object):
 						rgb, z = self.projectLight(self.render.lightColor, self.render.lightRatio)
 					elif projection_mode == 4:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 3)
+				else:
+					print('end')
 					
 			
 

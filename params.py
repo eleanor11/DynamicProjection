@@ -66,11 +66,12 @@ TEXTUREFILE = ''
 # 0: predicted, not realtime
 # 1: lighting & predicted
 # 2: lighting & predicted & lambertian
-# 3: predicted & lambertian, change illumination
+# 3: lighting & predicted & lambertian, change illumination
 # 4: lighting & predicted & lambertian & color lighting, change light color 3 * 256
 # 5: lighting & predicted & lambertian & color lighting, change illumination
-# 6: lighting & predicted point
-REALTIME_MODE = 6
+# 6: lighting & predicted point, not realtime
+# 7: lighting & predicted point, realtime
+REALTIME_MODE = 7
 
 REALTIME_LIMIT = 5
 PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting', 'predicted_point']
