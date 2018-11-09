@@ -315,6 +315,13 @@ class DynamicProjection(object):
 	def projectLight(self, color = np.array([1, 1, 1]), ratio = 0.25):
 
 		vertices = np.array([[-1, -1, 0], [3, -1, 0], [-1, 3, 0]], np.float32)
+		# vertices = np.array([[-1, -1, -15], [3, -1, -15], [-1, 3, -15]], np.float32)
+		# vertices = np.array([[0, 0, -5], [1, 0, -5], [0, 1, -5]], np.float32)
+
+		# lp = self.render.lightPosition
+		# vertices = np.concatenate([[lp], [lp + np.array([0.02, 0.0, 0.0])], [lp + np.array([0.0, 0.02, 0.0])]], 0).astype(np.float32)
+
+				
 		colors = (np.ones([3, 3], np.float32) * color * ratio).astype(np.float32)
 		# print(colors)
 
@@ -343,6 +350,8 @@ class DynamicProjection(object):
 
 		proj[mask, 0], proj[mask, 1], proj[mask, 2] = x, y, denom
 
+		# print(max(x), min(x), max(y), min(y), max(denom), min(denom))
+
 		kernel_cul = np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
 		cul = cv.erode(mask.astype(np.uint8), kernel_cul, iterations = 1, borderValue = 0)
 		cul_cmask = cul.astype(np.bool)
@@ -363,6 +372,8 @@ class DynamicProjection(object):
 
 		vertices = np.zeros([num * 3, 3], np.float32)
 		vertices[0::3, :], vertices[1::3, :], vertices[2::3, :] = p0, p1, p2
+
+		# print(np.max(vertices, 0) , np.min(vertices, 0))
 
 		uu = np.array([[i for i in range(512)]] * 424) 
 		uu = uu % 25 / 25.0
@@ -428,6 +439,23 @@ class DynamicProjection(object):
 		if shader == -1:
 			rgb, z = self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T)
 		else:
+			if shader == 3:
+				# point light
+				lp = self.render.lightPosition
+				vertex_light = np.concatenate([[lp], [lp + np.array([0.05, 0.0, 0.0])], [lp + np.array([0.0, 0.05, 0.0])]], 0).astype(np.float32)
+				vertex_light = np.concatenate([vertex_light, [lp], [lp + np.array([-0.05, 0.0, 0.0])], [lp + np.array([0.0, -0.05, 0.0])]], 0).astype(np.float32)
+				color_light = np.zeros((6, 3), np.float32)
+				normal_light = np.zeros((6, 3), np.float32)
+				reflect_light = 0 - np.ones((6, 3), np.float32)
+				uv_light = np.zeros((6, 2), np.float32)
+				vertices = np.concatenate([vertices, vertex_light], 0)
+				colors = np.concatenate([colors, color_light], 0)
+				normals = np.concatenate([normals, normal_light], 0)
+				reflects = np.concatenate([reflects, reflect_light], 0)
+				uv = np.concatenate([uv, uv_light], 0)
+
+				# print(vertices.shape, colors.shape, normals.shape, reflects.shape, uv.shape)
+
 			rgb, z = self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T, shader)
 
 		return rgb, z
@@ -756,7 +784,8 @@ class DynamicProjection(object):
 			# 0: lighting,  
 			# 1: virtual scene with learned BRDF, 
 			# 2: virtual scene with lambertian BRDF,
-			# 3: casual
+			# 3: casual,
+			# 4: point light with learned BRDF,
 			if REALTIME_MODE > 0:
 				projection_mode = 0
 				print('project ' + PROJECTION_TYPE[projection_mode])
@@ -764,6 +793,7 @@ class DynamicProjection(object):
 				projection_mode = -1
 
 			light_position_idx = 0
+			# light_position_idx = 7
 			light_color_idx = 0
 
 			self.render.lightPosition = LightPositions[light_position_idx]
@@ -776,7 +806,6 @@ class DynamicProjection(object):
 			self.render.lightRatio = light_ratio / 10.0
 
 		while run:
-			run = run_next
 
 			ch = cv.waitKey(1)
 			if ch == 27:
@@ -897,6 +926,8 @@ class DynamicProjection(object):
 
 				if time.time() - self.time > REALTIME_LIMIT:
 
+					run = run_next
+
 					# save proj data with projection on body
 					if SAVEALL:
 						if not os.path.isdir(DATAPATH + SUBALL):
@@ -906,6 +937,7 @@ class DynamicProjection(object):
 						makedir = makedir or (REALTIME_MODE == 3 and projection_mode == 1)
 						makedir = makedir or (REALTIME_MODE == 4 and projection_mode == 1)
 						makedir = makedir or (REALTIME_MODE == 5 and projection_mode == 1)
+						makedir = makedir or (REALTIME_MODE == 6)
 						if makedir:
 							path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 							if REALTIME_MODE == 4:
@@ -932,6 +964,9 @@ class DynamicProjection(object):
 						elif projection_mode == 3:
 							print('record color lighting...')
 							path += '/colorlighting'
+						elif projection_mode == 4:
+							print('record point lighting...')
+							path += '/predicted_point'
 						if projection_mode >= 0:
 							os.mkdir(path)
 
@@ -994,6 +1029,12 @@ class DynamicProjection(object):
 							self.index += 1
 							print(self.index)
 						print('project ' + PROJECTION_TYPE[projection_mode])
+					elif REALTIME_MODE == 6:
+						projection_mode = 4
+						self.index += 1
+						print(self.index)
+						print('project ' + PROJECTION_TYPE[projection_mode])
+						print('point light position: {} {}'.format(light_position_idx, LightPositions[light_position_idx]))
 
 					elif REALTIME_MODE > 0:
 						projection_mode = (projection_mode + 1) % (REALTIME_MODE + 1)
@@ -1048,6 +1089,13 @@ class DynamicProjection(object):
 							if light_color_idx == 0:
 								run = False
 
+					elif REALTIME_MODE == 6 and projection_mode == 4:
+						self.render.lightPosition = LightPositions[light_position_idx]
+						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
+						if light_position_idx == 0:
+							run_next = False
+							print('end')
+
 				if run:
 					# project rendered result
 					if projection_mode == -1:
@@ -1060,6 +1108,8 @@ class DynamicProjection(object):
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 1)
 					elif projection_mode == 3:
 						rgb, z = self.projectLight(self.render.lightColor, self.render.lightRatio)
+					elif projection_mode == 4:
+						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 3)
 					
 			
 

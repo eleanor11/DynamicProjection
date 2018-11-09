@@ -470,10 +470,10 @@ def train11():
 	# start_iter, datetime = 11000 + 1, '20180524_140932'
 
 
-	normal_ori_i = 0
+	normal_ori_i = 1
 	normal_ori = ['train', 'depth2normal']
 
-	data_size = 500
+	data_size = 40
 	batch_size = 5
 
 	indatapath = PATH + 'train_data_{}/'.format(data_size)

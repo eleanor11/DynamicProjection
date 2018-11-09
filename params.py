@@ -69,10 +69,11 @@ TEXTUREFILE = ''
 # 3: predicted & lambertian, change illumination
 # 4: lighting & predicted & lambertian & color lighting, change light color 3 * 256
 # 5: lighting & predicted & lambertian & color lighting, change illumination
-REALTIME_MODE = 5
+# 6: lighting & predicted point
+REALTIME_MODE = 6
 
 REALTIME_LIMIT = 5
-PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting']
+PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting', 'predicted_point']
 
 # ------------------------------------------------
 
@@ -87,16 +88,25 @@ PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting']
 # 	[0.0, 0.0, 1.0], 
 # 	[1.0, 0.0, 0.2], 
 # ])
+# LightPositions = np.array([
+# 	[0.0, 0.0, 1.0], 
+# 	[0.5, 0.0, 1.0], 
+# 	[1.0, 0.0, 1.0], 
+# 	[1.0, 0.0, 0.8], 
+# 	[1.0, 0.0, 0.5], 
+# 	[1.0, 0.0, 0.2], 
+# 	[1.0, 0.0, 0.0],
+# 	[0.0, 0.0, 0.0],
+# ])
 LightPositions = np.array([
+	[-1.0, 0.0, 1.0], 
+	[-0.5, 0.0, 1.0], 
 	[0.0, 0.0, 1.0], 
 	[0.5, 0.0, 1.0], 
 	[1.0, 0.0, 1.0], 
-	[1.0, 0.0, 0.8], 
-	[1.0, 0.0, 0.5], 
-	[1.0, 0.0, 0.2], 
-	[1.0, 0.0, 0.0],
+	[1.0, 0.5, 1.0], 
+	[1.0, 1.0, 1.0],
 ])
-
 
 # LightColors = np.array([
 # 	[1.0, 1.0, 1.0], 

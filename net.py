@@ -438,6 +438,9 @@ class DPNet1:
 		else: 
 			normal = self.normal
 
+		# print(rho_d.shape)
+		# print(normal.shape)
+
 
 		# viewdir = tf.constant([0.0, 0.0, 1.0])
 		# halfdir = (viewdir + self.lightdir) / tf.reduce_sum((viewdir + self.lightdir) ** 2)
