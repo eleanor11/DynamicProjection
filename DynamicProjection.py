@@ -19,7 +19,7 @@ DATAPATH = '../DynamicProjectionData/'
 
 MODE = params.MODE
 
-SAVE = True
+SAVE = False
 SAVEALL = False
 
 SUBIN = params.SUBIN
@@ -38,6 +38,7 @@ LightPositions = params.LightPositions
 LightColors = params.LightColors
 
 TEXTUREFILE = params.TEXTUREFILE
+TEXTUREFILE_LIGHT = params.TEXTUREFILE_LIGHT
 
 class DynamicProjection(object):
 	def __init__(self):
@@ -81,7 +82,15 @@ class DynamicProjection(object):
 			tex = np.ones([128, 128, 3], np.uint8) * 255
 		else:
 			tex = cv.imread(DATAPATH + TEXTUREFILE)
-		self.render = GLRenderer(b'projection', (self.pwidth, self.pheight), tex)
+
+		if TEXTUREFILE_LIGHT == '':
+			tex_light = np.ones([128, 128, 3], np.uint8) * 255
+		else:
+			tex_light = cv.imread(DATAPATH + TEXTUREFILE_LIGHT)
+			cv.imshow('tex_light', tex_light)
+			print(tex_light.shape)
+
+		self.render = GLRenderer(b'projection', (self.pwidth, self.pheight), tex, tex_light)
 
 		self.mvp = glm.ortho(-1, 1, -1, 1, -1, 1000)
 
@@ -451,12 +460,23 @@ class DynamicProjection(object):
 			if shader == 3:
 				# point light
 				lp = self.render.lightPosition
-				vertex_light = np.concatenate([[lp], [lp + np.array([0.05, 0.0, 0.0])], [lp + np.array([0.0, 0.05, 0.0])]], 0).astype(np.float32)
-				vertex_light = np.concatenate([vertex_light, [lp], [lp + np.array([-0.05, 0.0, 0.0])], [lp + np.array([0.0, -0.05, 0.0])]], 0).astype(np.float32)
+				light_size = 0.05
+				# vertex_light = np.concatenate([[lp], [lp + np.array([0.05, 0.0, 0.0])], [lp + np.array([0.0, 0.05, 0.0])]], 0).astype(np.float32)
+				# vertex_light = np.concatenate([vertex_light, [lp], [lp + np.array([-0.05, 0.0, 0.0])], [lp + np.array([0.0, -0.05, 0.0])]], 0).astype(np.float32)
+				vertex_light = np.concatenate([
+					[lp + np.array([light_size, -light_size, 0.0])], 
+					[lp + np.array([light_size, light_size, 0.0])], 
+					[lp + np.array([-light_size, light_size, 0.0])]], 0).astype(np.float32)
+				vertex_light = np.concatenate([vertex_light, 
+					[lp + np.array([light_size, -light_size, 0.0])], 
+					[lp + np.array([-light_size, light_size, 0.0])], 
+					[lp + np.array([-light_size, -light_size, 0.0])]], 0).astype(np.float32)
 				color_light = np.zeros((6, 3), np.float32)
 				normal_light = np.zeros((6, 3), np.float32)
 				reflect_light = 0 - np.ones((6, 3), np.float32)
-				uv_light = np.zeros((6, 2), np.float32)
+				# uv_light = np.zeros((6, 2), np.float32)
+				uv_light = np.array([[1, 1], [1, 0], [0, 0], [1, 1], [0, 0], [0, 1]], np.float32)
+
 				vertices = np.concatenate([vertices, vertex_light], 0)
 				colors = np.concatenate([colors, color_light], 0)
 				normals = np.concatenate([normals, normal_light], 0)

@@ -12,7 +12,7 @@ uniform mat4 MVP;
 uniform vec3 factors;
 
 out vec3 vColor;
-out vec2 vUV;
+out vec3 vUV;
 
 void main() {
 	gl_Position = MVP * vec4(vertexPosition, 1);
@@ -29,20 +29,21 @@ void main() {
 	float NdotL = max(dot(normal, lightDir), 0.0);
 	if (vertexReflect.x + 1 < 0.0001) {
 		vColor = vec3(1.0, 1.0, 1.0);
-		// vColor = vertexReflect * NdotL * lightColor * vertexColor * attenuation;
+		vUV = vec3(vertexUV.x, vertexUV.y, 1.0);
 	}
 	else {
 		vColor = vertexReflect * NdotL * lightColor * vertexColor * attenuation;
+		vUV = vec3(vertexUV.x, vertexUV.y, 0.0);
 	}
-	vUV = vertexUV;
 
+	// vUV = vertexUV;
 	// vColor = normal * 0.5 + 0.5;
 
-	float a = 1.0;
-	float b = 0.5;
+	// float a = 1.0;
+	// float b = 0.5;
 
 	// float k = attenuation;
-	float k = dist;
+	// float k = dist;
 
 	// if (k > a) {
 	//	vColor = vec3(0.0, 0.0, 1.0);

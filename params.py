@@ -4,7 +4,7 @@ import numpy as np
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use off-line data for all
-MODE = 0
+MODE = 2
 
 # ------------------------------------------------
 
@@ -51,20 +51,22 @@ SUBALL = 'data/test/'
 # 0: no reconstruction
 # 1: reconstruction of real scene
 # 2: use off-line data (rawdepth, mask, pre_normal, pre_reflect, pre_img)
-RECONSTRUCTION_MODE = 1
+RECONSTRUCTION_MODE = 2
 
 # ------------------------------------------------
 
 # # SUB_BRDF is the path to save off-line BRDF data
 
-# SUB_BRDF = 'data/data_pig_0629/0/'
-SUB_BRDF = 'data/data_body_0629_21/0/'
+# SUB_BRDF = 'data0/data_pig_0629/0/'
+SUB_BRDF = 'data0/data_body_0629_21/0/'
 
 
 # ------------------------------------------------
 
 # TEXTUREFILE = 'texture4.png'
 TEXTUREFILE = ''
+
+TEXTUREFILE_LIGHT = 'texture_light.png'
 
 # ------------------------------------------------
 

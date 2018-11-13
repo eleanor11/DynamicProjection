@@ -53,15 +53,15 @@ def LoadProgram(shaderPathList):
 		glDeleteShader(shader)
 	return program
 
-def LoadTexture(image):
+def LoadTexture(image, num, format):
 
 	[w, h] = image.shape[0:2]
 	# print(w, h)
 
 	texture = glGenTextures(1)
-	glActiveTexture(GL_TEXTURE0)
+	glActiveTexture(num)
 	glBindTexture(GL_TEXTURE_2D, texture)
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, w, h, 0, GL_BGR, GL_UNSIGNED_BYTE, image)
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, w, h, 0, format, GL_UNSIGNED_BYTE, image)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
@@ -70,7 +70,7 @@ def LoadTexture(image):
 	return texture
 
 class GLRenderer(object):
-	def __init__(self, name, size, tex_image):
+	def __init__(self, name, size, tex_image, tex_light_image):
 		self.width, self.height = size
 
 		glutInit()
@@ -100,7 +100,8 @@ class GLRenderer(object):
 		self.normalBuf = glGenBuffers(1)
 		# shader 2
 		self.reflectBuf = glGenBuffers(1)
-		self.texture = LoadTexture(tex_image)
+		self.texture = LoadTexture(tex_image, GL_TEXTURE0, GL_BGR)
+		self.texture_light = LoadTexture(tex_light_image, GL_TEXTURE1, GL_BGR)
 		self.uvBuf = glGenBuffers(1)
 		glClearColor(0.0, 0.0, 0.0, 0.0)
 
@@ -140,6 +141,7 @@ class GLRenderer(object):
 		self.lightPosition_3 = glGetUniformLocation(self.program[3], 'lightPosition')
 		self.lightColor_3 = glGetUniformLocation(self.program[3], 'lightColor')
 		self.texture_3 = glGetUniformLocation(self.program[3], 'myTexture')
+		self.texture_light_3 = glGetUniformLocation(self.program[3], 'myTextureLight')
 		self.factors_3 = glGetUniformLocation(self.program[3], 'factors')
 
 
@@ -150,6 +152,11 @@ class GLRenderer(object):
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 		glUseProgram(self.program[self.shader])
 		glUniformMatrix4fv(self.mvpMatrix, 1, GL_FALSE, mvp)
+
+		glDisable(GL_DEPTH_TEST)
+		glDisable(GL_CULL_FACE)
+		glEnable(GL_BLEND)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 		if self.shader == 1:
 			glUniform3fv(self.kd_, 1, np.array((0.9, 0.9, 0.9), np.float32))
@@ -165,6 +172,7 @@ class GLRenderer(object):
 			glUniform3fv(self.lightPosition_3, 1, self.lightPosition)
 			glUniform3fv(self.lightColor_3, 1, self.lightColor)
 			glUniform1i(self.texture_3, 0)
+			glUniform1i(self.texture_light_3, 1)
 			glUniform3fv(self.factors_3, 1, np.array((0.8, 1.0, 1.0), np.float32))
 
 		# print('lightPosition ', self.lightPosition)
@@ -262,6 +270,10 @@ class GLRenderer(object):
 
 		z = np.flip(np.flip(z, 0), 1)
 
+
+		glEnable(GL_CULL_FACE)
+		glEnable(GL_DEPTH_TEST)
+		glDisable(GL_BLEND)
 
 		return rgb, z
 
