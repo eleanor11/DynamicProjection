@@ -19,7 +19,7 @@ DATAPATH = '../DynamicProjectionData/'
 
 MODE = params.MODE
 
-SAVE = False
+SAVE = True
 SAVEALL = False
 
 SUBIN = params.SUBIN

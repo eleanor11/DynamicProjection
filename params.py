@@ -4,7 +4,7 @@ import numpy as np
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use off-line data for all
-MODE = 2
+MODE = 0
 
 # ------------------------------------------------
 
@@ -13,21 +13,26 @@ MODE = 2
 # SUBIN = 'data/data_pig_0629_origin/'
 # SUBIN = 'data/data_body_0629_origin/'
 # SUBIN = 'data/data_body_0629_2_origin/'
-SUBIN = 'data/data_pig_0629_2_origin/'
+# SUBIN = 'data/data_pig_0629_2_origin/'
 # SUBIN = 'data/data_body_empty_origin/'
 # SUBIN = 'data/data_pig_0630_origin/'
+
+SUBIN = 'data/data_body_1113_origin/'
+
 
 # ------------------------------------------------
 
 # # SUBOUT is the path to save the off-line data
 
 # SUBOUT = 'data/data_pig/'
-SUBOUT = 'data/data_bear/'
+# SUBOUT = 'data/data_bear/'
 # SUBOUT = 'data/data_pig_0629_origin/'
 # SUBOUT = 'data/data_body_0629_origin/'
 # SUBOUT = 'data/data_body_0629_2_origin/'
 # SUBOUT = 'data/data_body_empty_origin/'
 # SUBOUT = 'data/data_pig_0630_origin/'
+
+SUBOUT = 'data/data_body_1113_origin/'
 
 # ------------------------------------------------
 
@@ -46,7 +51,7 @@ SUBALL = 'data/test/'
 # 0: no reconstruction
 # 1: reconstruction of real scene
 # 2: use off-line data (rawdepth, mask, pre_normal, pre_reflect, pre_img)
-RECONSTRUCTION_MODE = 2
+RECONSTRUCTION_MODE = 1
 
 # ------------------------------------------------
 
@@ -71,7 +76,7 @@ TEXTUREFILE = ''
 # 5: lighting & predicted & lambertian & color lighting, change illumination
 # 6: lighting & predicted point, not realtime
 # 7: lighting & predicted point, realtime
-REALTIME_MODE = 7
+REALTIME_MODE = 6
 
 REALTIME_LIMIT = 5
 PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting', 'predicted_point']
