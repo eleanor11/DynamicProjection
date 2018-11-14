@@ -8,6 +8,12 @@ MODE = 2
 
 # ------------------------------------------------
 
+PROJECTION_MODE = False
+
+
+# ------------------------------------------------
+
+
 # # SUBIN is the path to load the off-line data
 
 # SUBIN = 'data/data_pig_0629_origin/'

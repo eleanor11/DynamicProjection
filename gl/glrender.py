@@ -3,9 +3,10 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 import numpy as np
 import cv2 as cv
+import params
 import PIL.Image as im
 
-PROJECTION_MODE = False
+PROJECTION_MODE = params.PROJECTION_MODE
 
 # 0: default	
 # 1: shader1(lambert) 	

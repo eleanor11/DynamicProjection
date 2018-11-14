@@ -87,8 +87,6 @@ class DynamicProjection(object):
 			tex_light = np.ones([128, 128, 3], np.uint8) * 255
 		else:
 			tex_light = cv.imread(DATAPATH + TEXTUREFILE_LIGHT)
-			cv.imshow('tex_light', tex_light)
-			print(tex_light.shape)
 
 		self.render = GLRenderer(b'projection', (self.pwidth, self.pheight), tex, tex_light)
 
