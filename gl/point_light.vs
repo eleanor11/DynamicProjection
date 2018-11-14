@@ -28,7 +28,7 @@ void main() {
  
 	float NdotL = max(dot(normal, lightDir), 0.0);
 	if (vertexReflect.x + 1 < 0.0001) {
-		vColor = vec3(1.0, 1.0, 1.0);
+		vColor = lightColor;
 		vUV = vec3(vertexUV.x, vertexUV.y, 1.0);
 	}
 	else {
