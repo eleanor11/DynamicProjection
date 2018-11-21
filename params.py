@@ -23,7 +23,7 @@ PROJECTION_MODE = False
 # SUBIN = 'data/data_body_empty_origin/'
 # SUBIN = 'data/data_pig_0630_origin/'
 
-SUBIN = 'data/data_body_1113_origin/'
+SUBIN = 'data/data_body_origin/'
 
 
 # ------------------------------------------------
@@ -38,7 +38,8 @@ SUBIN = 'data/data_body_1113_origin/'
 # SUBOUT = 'data/data_body_empty_origin/'
 # SUBOUT = 'data/data_pig_0630_origin/'
 
-SUBOUT = 'data/data_body_1113_origin/'
+SUBOUT = 'data/data_body_origin/'
+
 
 # ------------------------------------------------
 
@@ -50,7 +51,7 @@ SUBOUT = 'data/data_body_1113_origin/'
 # SUBALL = 'data/data_bear_0630_1/'
 # SUBALL = 'data/data_bear_0630_2/'
 # SUBALL = 'data/data_bear_0630_3/'
-SUBALL = 'data/test/'
+SUBALL = 'data/data_body_1114/'
 
 # ------------------------------------------------
 
