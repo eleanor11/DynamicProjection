@@ -84,10 +84,12 @@ TEXTUREFILE_LIGHT = 'texture_light.png'
 # 5: lighting & predicted & lambertian & color lighting, change illumination
 # 6: lighting & predicted point, not realtime
 # 7: lighting & predicted point, realtime
-REALTIME_MODE = 6
+# 8: lighting & predicted point & default point, realtime
+
+REALTIME_MODE = 8
 
 REALTIME_LIMIT = 5
-PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting', 'predicted_point']
+PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting', 'predicted_point', 'defalut_point']
 
 # ------------------------------------------------
 

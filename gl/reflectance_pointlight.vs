@@ -29,11 +29,11 @@ void main() {
 	float NdotL = max(dot(normal, lightDir), 0.0);
 	if (vertexReflect.x + 1 < 0.0001) {
 		vColor = lightColor;
-		vUV = vec3(vertexUV.x, vertexUV.y, 1.0);
+		vUV = vec3(vertexUV, 1.0);
 	}
 	else {
 		vColor = vertexReflect * NdotL * lightColor * vertexColor * attenuation;
-		vUV = vec3(vertexUV.x, vertexUV.y, 0.0);
+		vUV = vec3(vertexUV, 0.0);
 	}
 
 	// vUV = vertexUV;

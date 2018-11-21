@@ -455,7 +455,7 @@ class DynamicProjection(object):
 		if shader == -1:
 			rgb, z = self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T)
 		else:
-			if shader == 3:
+			if shader == 3 or shader == 4:
 				# point light
 				lp = self.render.lightPosition
 				light_size = 0.05
@@ -839,6 +839,7 @@ class DynamicProjection(object):
 			# 2: virtual scene with lambertian BRDF,
 			# 3: casual,
 			# 4: point light with learned BRDF,
+			# 5：point light without learned BRDF,
 			if REALTIME_MODE > 0:
 				projection_mode = 0
 				print('project ' + PROJECTION_TYPE[projection_mode])
@@ -1018,8 +1019,11 @@ class DynamicProjection(object):
 							print('record color lighting...')
 							path += '/colorlighting'
 						elif projection_mode == 4:
-							print('record point lighting...')
+							print('record pointlight with predicted...')
 							path += '/predicted_point'
+						elif projection_mode == 5:
+							print('record pointlight without predicted...')
+							path += '/default_point'
 						if projection_mode >= 0:
 							os.mkdir(path)
 
@@ -1094,6 +1098,15 @@ class DynamicProjection(object):
 							self.index += 1
 							print(self.index)
 						print('project ' + PROJECTION_TYPE[projection_mode])
+					elif REALTIME_MODE == 8:
+						if projection_mode == 0:
+							projection_mode = 4
+						else:
+							projection_mode = (projection_mode + 1) % 6
+						if projection_mode == 0:
+							self.index += 1
+							print(self.index)
+						print('project ' + PROJECTION_TYPE[projection_mode])
 
 					elif REALTIME_MODE > 0:
 						projection_mode = (projection_mode + 1) % (REALTIME_MODE + 1)
@@ -1158,6 +1171,12 @@ class DynamicProjection(object):
 							[x, y] = joint_points[JOINT_INDEX]
 							self.render.lightPosition = self.uv2project(joint_points[JOINT_INDEX], rawdepth[y * 512 + 511 - x])
 
+					elif REALTIME_MODE == 8 and projection_mode == 5:
+						if not joint_states[JOINT_INDEX] == PyKinectV2.TrackingState_NotTracked:
+							[x, y] = joint_points[JOINT_INDEX]
+							self.render.lightPosition = self.uv2project(joint_points[JOINT_INDEX], rawdepth[y * 512 + 511 - x])
+
+
 				if run:
 					# project rendered result
 					if projection_mode == -1:
@@ -1172,6 +1191,8 @@ class DynamicProjection(object):
 						rgb, z = self.projectLight(self.render.lightColor, self.render.lightRatio)
 					elif projection_mode == 4:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 3)
+					elif projection_mode == 5:
+						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 4)
 				else:
 					print('end')
 					

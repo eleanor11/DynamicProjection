@@ -12,18 +12,11 @@ PROJECTION_MODE = params.PROJECTION_MODE
 # 1: shader1(lambert) 	
 # 2: shader2(reflect * normal)
 # 3: shader3(reflect * normal, point light)
+# 4: shader4(light * normal, point light)
 # SHADER = 0
 # SHADER = 1
-SHADER = 3
+SHADER = 4
 lightPosition = np.array([0.0, 0.0, 1.0])
-# lightPosition = np.array([-1.0, 0.0, 0.0])
-# # lightPosition = np.array([1.0, 2.0, 0.0])
-
-# lightPosition = np.array([1.0, 0.0, 1.0])
-# lightPosition = np.array([0.0, 0.0, 1.0])
-# lightPosition = np.array([1.0, 2.0, 0.0])
-# lightPosition = np.array([1.0, 0.0, 0.2])
-# lightPosition = np.array([1.0, 0.0, 0.5])
 
 def LoadProgram(shaderPathList):
 	shaderTypeMapping = {
@@ -113,17 +106,21 @@ class GLRenderer(object):
 		# shaderPathList = [os.path.join('gl', sh) for sh in ['default.vs', 'default.fs']]
 		self.program.append(LoadProgram(shaderPathList))
 
-		shaderPathList = [os.path.join('gl', sh) for sh in ['test.vs', 'test.fs']]
+		shaderPathList = [os.path.join('gl', sh) for sh in ['const_lbt.vs', 'const_lbt.fs']]
 		self.program.append(LoadProgram(shaderPathList))
 
-		shaderPathList = [os.path.join('gl', sh) for sh in ['test_brdf.vs', 'test_brdf.fs']]
+		shaderPathList = [os.path.join('gl', sh) for sh in ['reflectance_lbt.vs', 'reflectance_lbt.fs']]
 		self.program.append(LoadProgram(shaderPathList))
 
-		shaderPathList = [os.path.join('gl', sh) for sh in ['point_light.vs', 'point_light.fs']]
+		shaderPathList = [os.path.join('gl', sh) for sh in ['reflectance_pointlight.vs', 'reflectance_pointlight.fs']]
+		self.program.append(LoadProgram(shaderPathList))
+
+		shaderPathList = [os.path.join('gl', sh) for sh in ['default_pointlight.vs', 'default_pointlight.fs']]
 		self.program.append(LoadProgram(shaderPathList))
 
 
-		for i in range(4):
+		for i in range(5):
+			print(i)
 			self.mvpMatrix = glGetUniformLocation(self.program[i], 'MVP')
 
 		# shader 1
@@ -144,6 +141,13 @@ class GLRenderer(object):
 		self.texture_3 = glGetUniformLocation(self.program[3], 'myTexture')
 		self.texture_light_3 = glGetUniformLocation(self.program[3], 'myTextureLight')
 		self.factors_3 = glGetUniformLocation(self.program[3], 'factors')
+
+		# shader 4
+		self.lightPosition_4 = glGetUniformLocation(self.program[4], 'lightPosition')
+		self.lightColor_4 = glGetUniformLocation(self.program[4], 'lightColor')
+		self.texture_4 = glGetUniformLocation(self.program[4], 'myTexture')
+		self.texture_light_4 = glGetUniformLocation(self.program[4], 'myTextureLight')
+		self.factors_4 = glGetUniformLocation(self.program[4], 'factors')
 
 
 
@@ -175,6 +179,12 @@ class GLRenderer(object):
 			glUniform1i(self.texture_3, 0)
 			glUniform1i(self.texture_light_3, 1)
 			glUniform3fv(self.factors_3, 1, np.array((0.8, 1.0, 1.0), np.float32))
+		elif self.shader == 4:
+			glUniform3fv(self.lightPosition_4, 1, self.lightPosition)
+			glUniform3fv(self.lightColor_4, 1, self.lightColor)
+			glUniform1i(self.texture_4, 0)
+			glUniform1i(self.texture_light_4, 1)
+			glUniform3fv(self.factors_4, 1, np.array((0.8, 1.0, 1.0), np.float32))
 
 		# print('lightPosition ', self.lightPosition)
 		# print('lightColor ', self.lightColor)
@@ -203,7 +213,7 @@ class GLRenderer(object):
 			None
 		)
 
-		# SHADER 1, 2, 3
+		# SHADER 1, 2, 3, 4
 		if self.shader > 0:
 			glEnableVertexAttribArray(2)
 			glBindBuffer(GL_ARRAY_BUFFER, self.normalBuf)
@@ -218,7 +228,7 @@ class GLRenderer(object):
 			)
 
 		# SHADER 2, 3
-		if self.shader > 1:
+		if self.shader > 1:			
 			glEnableVertexAttribArray(3)
 			glBindBuffer(GL_ARRAY_BUFFER, self.reflectBuf)
 			glBufferData(GL_ARRAY_BUFFER, reflects, GL_STATIC_DRAW)
