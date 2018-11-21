@@ -897,6 +897,10 @@ class DynamicProjection(object):
 					# smooth rawdepth map
 					rawdepth_filter = self.smooth(mask, not_mask, rawdepth, depth_part)
 
+					# joint 
+					joint_state = joint_states[JOINT_INDEX]
+					joint_point = joint_points[JOINT_INDEX]
+
 					# TODO: segmentation
 
 
@@ -1167,14 +1171,14 @@ class DynamicProjection(object):
 							run_next = False
 
 					elif REALTIME_MODE == 7 and projection_mode == 4:
-						if not joint_states[JOINT_INDEX] == PyKinectV2.TrackingState_NotTracked:
-							[x, y] = joint_points[JOINT_INDEX]
-							self.render.lightPosition = self.uv2project(joint_points[JOINT_INDEX], rawdepth[y * 512 + 511 - x])
+						if not joint_state == PyKinectV2.TrackingState_NotTracked:
+							[x, y] = joint_point
+							self.render.lightPosition = self.uv2project(joint_point, rawdepth[y * 512 + 511 - x])
 
-					elif REALTIME_MODE == 8 and projection_mode == 5:
-						if not joint_states[JOINT_INDEX] == PyKinectV2.TrackingState_NotTracked:
-							[x, y] = joint_points[JOINT_INDEX]
-							self.render.lightPosition = self.uv2project(joint_points[JOINT_INDEX], rawdepth[y * 512 + 511 - x])
+					elif REALTIME_MODE == 8 and projection_mode == 4:
+						if not joint_state == PyKinectV2.TrackingState_NotTracked:
+							[x, y] = joint_point
+							self.render.lightPosition = self.uv2project(joint_point, rawdepth[y * 512 + 511 - x])
 
 
 				if run:

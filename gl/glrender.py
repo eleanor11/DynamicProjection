@@ -120,7 +120,6 @@ class GLRenderer(object):
 
 
 		for i in range(5):
-			print(i)
 			self.mvpMatrix = glGetUniformLocation(self.program[i], 'MVP')
 
 		# shader 1
