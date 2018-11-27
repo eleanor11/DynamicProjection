@@ -998,6 +998,7 @@ class DynamicProjection(object):
 						makedir = makedir or (REALTIME_MODE == 4 and projection_mode == 1)
 						makedir = makedir or (REALTIME_MODE == 5 and projection_mode == 1)
 						makedir = makedir or (REALTIME_MODE == 6)
+						makedir = makedir or (REALTIME_MODE == 9 and projection_mode == 4)
 						if makedir:
 							path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 							if REALTIME_MODE == 4:
@@ -1201,9 +1202,9 @@ class DynamicProjection(object):
 						self.render.lightColor = LightColors[light_color_idx]
 						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
 						if light_position_idx == 0:
-						light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
-						if light_color_idx == 0:
-							run = False	
+							light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
+							if light_color_idx == 0:
+								run = False	
 
 
 				if run:
