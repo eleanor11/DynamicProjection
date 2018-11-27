@@ -729,9 +729,9 @@ class DynamicProjection(object):
 				if time.time() - t0 >= 3:
 					hint[:, :] = RED
 				if MODE < 2:
-					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawDataWithKinect(False)
+					flag, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points = self.getRawDataWithKinect(False)
 				else:
-					flag, rawdepth, rawcolor, rawinfrared, cameraColor = self.getRawData()
+					flag, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points = self.getRawData()
 				if flag:
 
 					mask = np.abs(rawdepth.reshape([424, 512]) - rawdepth_b) > 50
@@ -810,14 +810,15 @@ class DynamicProjection(object):
 		# self.colorCalibration()
 		# run = False
 
-		# # capture train data
-		# gid, gnum, gdelay = 0, 20, 0
-		# cd_dirname = 'capture_data_origin_0616/'
+		# capture train data
+		gid, gnum, gdelay = 0, 20, 0
+		cd_dirname = 'capture_data_origin_1127/'
 
 		# gid, gnum, gdelay = 0, 2, 0
 		# cd_dirname = 'capture_data_origin_pig/'
-		# self.captureTrainData(gid, gnum, gdelay, cd_dirname)
-		# run = False
+
+		self.captureTrainData(gid, gnum, gdelay, cd_dirname)
+		run = False
 		
 		print('start...')
 
@@ -839,7 +840,8 @@ class DynamicProjection(object):
 			# 2: virtual scene with lambertian BRDF,
 			# 3: casual,
 			# 4: point light with learned BRDF,
-			# 5：point light without learned BRDF,
+			# 5: point light without learned BRDF,
+			# 6: point light with designed params,
 			if REALTIME_MODE > 0:
 				projection_mode = 0
 				print('project ' + PROJECTION_TYPE[projection_mode])
@@ -967,7 +969,7 @@ class DynamicProjection(object):
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
 				cc = cv.imread('color_mb1.png')
-				if projection_mode == 2:
+				if projection_mode == 2 or projection_mode == 6:
 				 	corres[mask] = cc[mask]
 				# corres[mask] = texture[mask]
 				# corres[mask] = pre_img[0][mask] * 255
@@ -1028,6 +1030,9 @@ class DynamicProjection(object):
 						elif projection_mode == 5:
 							print('record pointlight without predicted...')
 							path += '/default_point'
+						elif projection_mode == 6:
+							print('record pointlight with designed params...')
+							path += '/designed_point'
 						if projection_mode >= 0:
 							os.mkdir(path)
 
@@ -1111,6 +1116,17 @@ class DynamicProjection(object):
 							self.index += 1
 							print(self.index)
 						print('project ' + PROJECTION_TYPE[projection_mode])
+					elif REALTIME_MODE == 9:
+						if projection_mode == 0:
+							projection_mode = 4
+						elif projection_mode == 4:
+							projection_mode = 6
+						elif projection_mode == 6:
+							projection_mode = 4
+						if projection_mode == 4:
+							self.index += 1
+							print(self.index)
+						print('project ' + PROJECTION_TYPE[projection_mode])
 
 					elif REALTIME_MODE > 0:
 						projection_mode = (projection_mode + 1) % (REALTIME_MODE + 1)
@@ -1180,6 +1196,15 @@ class DynamicProjection(object):
 							[x, y] = joint_point
 							self.render.lightPosition = self.uv2project(joint_point, rawdepth[y * 512 + 511 - x])
 
+					elif REALTIME_MODE == 9 and projection_mode == 4:
+						self.render.lightPosition = LightPositions[light_position_idx]	
+						self.render.lightColor = LightColors[light_color_idx]
+						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
+						if light_position_idx == 0:
+						light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
+						if light_color_idx == 0:
+							run = False	
+
 
 				if run:
 					# project rendered result
@@ -1196,6 +1221,8 @@ class DynamicProjection(object):
 					elif projection_mode == 4:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 3)
 					elif projection_mode == 5:
+						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 4)
+					elif projection_mode == 6:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 4)
 				else:
 					print('end')
