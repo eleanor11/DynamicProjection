@@ -35,13 +35,15 @@ def prepareLog(start_iter, normal_ori_i, datetime = ''):
 
 def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False):
 
-	print('load data')
+	print('loading data...')
 
 	normal = np.empty([0, 424, 512, 3], np.float32)
 	color = np.empty([0, 424, 512, 3], np.uint8)
 	mask = np.empty([0, 424, 512], np.bool)
 
 	for i in range(data_size):
+		if i % 200 == 0:
+			print('data {}'.format(i))
 		normal = np.append(normal, [np.load(indatapath + 'normal{}.npy'.format(i))], axis = 0)
 		color = np.append(color, [np.load(indatapath + 'color{}.npy'.format(i))], axis = 0)
 		mask = np.append(mask, [np.load(indatapath + 'mask{}.npy'.format(i))], axis = 0)
@@ -64,10 +66,6 @@ def readData(indatapath, outdatapath, data_size, batch_size, remove_back = False
 	else:
 		indices = np.random.permutation(data_size)
 		np.save(outdatapath + '/indices.npy', indices)
-	
-	# indices = np.load(PATH + 'indices/indices0.npy')
-	# indices = np.load(PATH + 'indices/indices1.npy')
-	np.save(outdatapath + '/indices.npy', indices)
 
 	train_idx, test_idx = indices[: train_size], indices[train_size:]
 	train_normal, test_normal = normal[train_idx], normal[test_idx]
@@ -131,22 +129,27 @@ def train():
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	data_size = 500
+	data_size = 540
 	# data_size = 25
 	batch_size = 5
 
-	# lp_iter = 2000
-	# lp_iter = 0
-	lp_iter = 20000
+	# no supervision: 0, early supervision: 1, full supervision: 2
+	supervision = 0
+	supervision_strategy = ['no', 'early', 'full']
+	if supervision == 0:
+		lp_iter = 0	
+	elif supervision == 1:
+		lp_iter = 2000
+	else:
+		lp_iter = end_iter
 	
 	lamda_default = 1
 	# lamda_default = 10
 
 	learning_rate = 1e-2
 
-	indatapath = PATH + 'train_data_{}/'.format(data_size)
-	# indatapath = PATH + 'train_data_{}_1/'.format(data_size)
-	# indatapath = PATH + 'train_data_500_1/'
+	# indatapath = PATH + 'train_data_{}/'.format(data_size)
+	indatapath = PATH + 'train_data_{}_1/'.format(data_size)
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
 	remove_back = False
@@ -160,7 +163,7 @@ def train():
 	logging.info('net: 0')
 	logging.info('datapath: ' + indatapath)
 	logging.info('normal: ' + normal_ori[normal_ori_i])
-	logging.info('lp_iter: {}'.format(lp_iter))
+	logging.info('supervision strategy: {} supervision, lp_iter: {}'.format(supervision_strategy[supervision], lp_iter))
 	logging.info('remove_back: {}'.format(remove_back))
 	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
 	logging.info('batch_size: {}, lamda: {}'.format(batch_size, lamda_default))
@@ -317,7 +320,7 @@ def train():
 		# 			model.lamda: lamda, 
 		# 			model.learning_rate: learning_rate})
 
-			if i % 1000 == 0 or i == 19999:
+			if i % 1000 == 0 or i == end_iter - 1:
 				tf.train.Saver().save(sess, ckptpath + '/model_latest')
 				tf.train.Saver().save(sess, ckptpath + '/model_{}'.format(i))
 
@@ -707,5 +710,5 @@ def train2():
 
 
 if __name__ == '__main__':
-	# train()
-	train11()
+	train()
+	# train11()
