@@ -125,6 +125,7 @@ def train():
 
 	start_iter, datetime = 0, ''
 	#start_iter, datetime = 2000 + 1, '20180611_181307_0'
+	end_iter = 20000
 
 
 	normal_ori_i = 0
@@ -135,8 +136,8 @@ def train():
 	batch_size = 5
 
 	# lp_iter = 2000
-	lp_iter = 0
-	# lp_iter = 20000
+	# lp_iter = 0
+	lp_iter = 20000
 	
 	lamda_default = 1
 	# lamda_default = 10
@@ -179,7 +180,7 @@ def train():
 
 		results = np.empty([0, 7], np.float32)
 
-		for i in range(start_iter, 20000):
+		for i in range(start_iter, end_iter):
 			if i % 20 == 0:
 				print(i)
 			idx = i % end
@@ -190,7 +191,7 @@ def train():
 				lamda = 0
 
 
-			if i % 100 == 0 or i == 19999:
+			if i % 100 == 0 or i == end_iter - 1:
 
 				# train accuracy
 				train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp, train_ii = sess.run(
@@ -210,7 +211,7 @@ def train():
 					train_lp,
 					learning_rate))
 
-				if i % 300 == 0 or i == 19999:
+				if i % 300 == 0 or i == end_iter - 1:
 					train_ii[train_ii < 0] = 0
 					train_ii[train_ii > 1] = 1
 					train_ii = (train_ii * 255).astype(np.uint8)
@@ -234,7 +235,7 @@ def train():
 
 					pre_normal = result[6]
 					test_ii = result[5]
-					if i % 2000 == 0 or i == 19999:
+					if i % 2000 == 0 or i == end_iter - 1:
 						pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
 						pre_normal[pre_normal > 255] = 255
 						for j in range(batch_size):
