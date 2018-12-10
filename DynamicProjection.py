@@ -120,7 +120,7 @@ class DynamicProjection(object):
 		dsp = np.zeros([1080 * 1920 * 2], np.float32)
 		self.kinect._mapper.MapColorFrameToDepthSpace(
 			424 * 512, 
-			rawdepth.ctypes.data_as(ctype.POINTER(ctypes.c_ushort)), 
+			rawdepth.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort)), 
 			1080 * 1920, 
 			dsp.ctypes.data_as(ctypes.POINTER(_DepthSpacePoint)))
 
@@ -484,6 +484,141 @@ class DynamicProjection(object):
 				# print(vertices.shape, colors.shape, normals.shape, reflects.shape, uv.shape)
 
 			rgb, z = self.render.draw(vertices, colors, normals, reflects, uv, self.mvp.T, shader)
+
+		return rgb, z
+
+	def project_shader0(self, rawdepth, corres, mask, mask_edge = np.zeros([424, 512], np.bool)):
+		proj = np.zeros([424, 512, 3], np.float32)
+
+		rawdepth = rawdepth.reshape([424, 512])[mask]
+		u = np.array([[i for i in range(511, -1, -1)]] * 424)[mask]
+		v = np.array([[i for j in range(512)] for i in range(424)])[mask]
+
+		# print(u.shape, u)
+
+		Z = rawdepth / 1000
+		X = (u - self.cx) * Z / self.fx
+		Y = (self.cy - v) * Z / self.fy
+
+		t = self.t
+		denom = t[8] * X + t[9] * Y + t[10] * Z + 1
+		x = (t[0] * X + t[1] * Y + t[2] * Z + t[3]) / denom * 2 - 1
+		y = 1 - (t[4] * X + t[5] * Y + t[6] * Z + t[7]) / denom * 2
+
+		proj[mask, 0], proj[mask, 1], proj[mask, 2] = x, y, denom
+
+	
+		kernel_cul = np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
+		cul = cv.erode(mask.astype(np.uint8), kernel_cul, iterations = 1, borderValue = 0)
+		cul_cmask = cul.astype(np.bool)
+		cul_umask = cv.filter2D(cul, -1, np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		cul_lmask = cv.filter2D(cul, -1, np.array([[0, 0, 0], [0, 0, 1], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		kernel_cdr = np.array([[0, 0, 0], [0, 1, 1], [0, 1, 0]], dtype = np.uint8)
+		cdr = cv.erode(mask.astype(np.uint8), kernel_cdr, iterations = 1, borderValue = 0)
+		cdr_cmask = cdr.astype(np.bool)
+		cdr_dmask = cv.filter2D(cdr, -1, np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		cdr_rmask = cv.filter2D(cdr, -1, np.array([[0, 0, 0], [1, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		# cru, cld
+		kernel_cru = np.array([[0, 1, 0], [0, 1, 1], [0, 0, 0]], dtype = np.uint8)
+		cru = cv.erode(mask.astype(np.uint8), kernel_cru, iterations = 1, borderValue = 0)
+		# cru[x, y] -> cdr[x - 1, y] & cul[x, y + 1], cdr move down, cul move left
+		cru = (~ (np.concatenate((np.zeros([1, 512], dtype = np.bool), cdr[0: 423, :]), 0) & (np.concatenate((cul[:, 1: 512], np.zeros([424, 1], dtype = np.bool)), 1)))) & cru
+		cru_cmask = cru.astype(np.bool)
+		cru_rmask = cv.filter2D(cru, -1, np.array([[0, 0, 0], [1, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		cru_umask = cv.filter2D(cru, -1, np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		kernel_cld = np.array([[0, 0, 0], [1, 1, 0], [0, 1, 0]], dtype = np.uint8)
+		cld = cv.erode(mask.astype(np.uint8), kernel_cld, iterations = 1, borderValue = 0)
+		# cld[x, y] -> cdr[x, y - 1] & cul[x + 1, y], cdr move right, cul move up
+		cld = (~ (np.concatenate((np.zeros([424, 1], dtype = np.bool), cdr[:, 0: 511]), 1) & (np.concatenate((cul[1: 424, :], np.zeros([1, 512], dtype = np.bool)), 0)))) & cld
+		cld_cmask = cld.astype(np.bool)
+		cld_lmask = cv.filter2D(cld, -1, np.array([[0, 0, 0], [0, 0, 1], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		cld_dmask = cv.filter2D(cld, -1, np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+
+		kernel_curl = np.array([[0, 0, 1], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
+		curl = cv.erode(mask_edge.astype(np.uint8), kernel_curl, iterations = 1, borderValue = 0)
+		curl_cmask = curl.astype(np.bool)
+		curl_urmask = cv.filter2D(curl, -1, np.array([[0, 0, 0], [0, 0, 0], [1, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		curl_lmask = cv.filter2D(curl, -1, np.array([[0, 0, 0], [0, 0, 1], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		kernel_cdlr = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 0]], dtype = np.uint8)
+		cdlr = cv.erode(mask_edge.astype(np.uint8), kernel_cdlr, iterations = 1, borderValue = 0)
+		cdlr_cmask = cdlr.astype(np.bool)
+		cdlr_dlmask = cv.filter2D(cdlr, -1, np.array([[0, 0, 1], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		cdlr_rmask = cv.filter2D(cdlr, -1, np.array([[0, 0, 0], [1, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		kernel_crdu = np.array([[0, 1, 0], [0, 1, 0], [0, 0, 1]], dtype = np.uint8)
+		crdu = cv.erode(mask_edge.astype(np.uint8), kernel_crdu, iterations = 1, borderValue = 0)
+		crdu_cmask = crdu.astype(np.bool)
+		crdu_rdmask = cv.filter2D(crdu, -1, np.array([[1, 0, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		crdu_umask = cv.filter2D(crdu, -1, np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		kernel_clud = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 0]], dtype = np.uint8)
+		clud = cv.erode(mask_edge.astype(np.uint8), kernel_clud, iterations = 1, borderValue = 0)
+		clud_cmask = clud.astype(np.bool)
+		clud_lumask = cv.filter2D(clud, -1, np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		clud_dmask = cv.filter2D(clud, -1, np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+
+		# # cul & cdr
+		num = np.sum(cul) + np.sum(cdr)
+
+		p0 = np.concatenate([proj[cul_cmask], proj[cdr_cmask]], 0)
+		p2 = np.concatenate([proj[cul_umask], proj[cdr_dmask]], 0)
+		p1 = np.concatenate([proj[cul_lmask], proj[cdr_rmask]], 0)
+
+		corres = corres[..., ::-1]
+		c0 = np.concatenate([corres[cul_cmask], corres[cdr_cmask]], 0)
+		c2 = np.concatenate([corres[cul_umask], corres[cdr_dmask]], 0)
+		c1 = np.concatenate([corres[cul_lmask], corres[cdr_rmask]], 0)
+
+
+		# cul & cdr & cru & cld
+		num = num + np.sum(cru) + np.sum(cld)
+			
+		p0 = np.concatenate([p0, proj[cru_cmask], proj[cld_cmask]], 0)
+		p2 = np.concatenate([p2, proj[cru_rmask], proj[cld_lmask]], 0)
+		p1 = np.concatenate([p1, proj[cru_umask], proj[cld_dmask]], 0)
+
+		c0 = np.concatenate([c0, corres[cru_cmask], corres[cld_cmask]], 0)
+		c2 = np.concatenate([c2, corres[cru_rmask], corres[cld_lmask]], 0)
+		c1 = np.concatenate([c1, corres[cru_umask], corres[cld_dmask]], 0)
+
+
+		# curl & cdlr 
+		# num = num + np.sum(curl) + np.sum(cdlr)
+
+		# p0 = np.concatenate([p0, proj[curl_cmask], proj[cdlr_cmask]], 0)
+		# p2 = np.concatenate([p2, proj[curl_urmask], proj[cdlr_dlmask]], 0)
+		# p1 = np.concatenate([p1, proj[curl_lmask], proj[cdlr_rmask]], 0)
+
+		# c0 = np.concatenate([c0, corres[curl_cmask], corres[cdlr_cmask]], 0)
+		# c2 = np.concatenate([c2, corres[curl_urmask], corres[cdlr_dlmask]], 0) 
+		# c1 = np.concatenate([c1, corres[curl_lmask], corres[cdlr_rmask]], 0) 
+
+		# crdu & clud
+		num = num + np.sum(crdu) + np.sum(clud)
+
+		p0 = np.concatenate([p0, proj[crdu_cmask], proj[clud_cmask]], 0)
+		p2 = np.concatenate([p2, proj[crdu_rdmask], proj[clud_lumask]], 0)
+		p1 = np.concatenate([p1, proj[crdu_umask], proj[clud_dmask]], 0)
+
+		c0 = np.concatenate([c0, corres[crdu_cmask], corres[clud_cmask]], 0)
+		c2 = np.concatenate([c2, corres[crdu_rdmask], corres[clud_lumask]], 0) 
+		c1 = np.concatenate([c1, corres[crdu_umask], corres[clud_dmask]], 0) 
+
+
+
+		vertices = np.zeros([num * 3, 3], np.float32)
+		vertices[0::3, :], vertices[1::3, :], vertices[2::3, :] = p0, p1, p2
+		c0, c1, c2 = c0 / 255, c1 / 255, c2 / 255
+		colors = np.zeros([num * 3, 3], np.float32)
+		colors[0::3, :], colors[1::3, :], colors[2::3, :] = c0, c1, c2	
+
+		rgb, z = self.render.draw(vertices, colors, None, None, None, self.mvp.T, 0)
 
 		return rgb, z
 

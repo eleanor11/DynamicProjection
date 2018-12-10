@@ -27,13 +27,15 @@ def prepareLog(normal_ori_i):
 
 def readData(indatapath, datasize, remove_back = False):
 
-	print('load data')
+	print('loading data...')
 
 	normal = np.empty([0, 424, 512, 3], np.float32)
 	color = np.empty([0, 424, 512, 3], np.uint8)
 	mask = np.empty([0, 424, 512], np.bool)
 
 	for i in range(datasize):
+		if i % 200 == 0:
+			print('data {}'.format(i))
 		normal = np.append(normal, [np.load(indatapath + 'normal{}.npy'.format(i))], axis = 0)
 		color = np.append(color, [np.load(indatapath + 'color{}.npy'.format(i))], axis = 0)
 		mask = np.append(mask, [np.load(indatapath + 'mask{}.npy'.format(i))], axis = 0)
@@ -91,14 +93,10 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180701_001923_0'
+	path = '20181208_223855_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
-	datasize, datasize_trained = 500, 500
-	# datasize, datasize_trained = 600, 600
-	# datasize, datasize_trained = 660, 660
-	# datasize, datasize_trained = 40, 0
-	# datasize, datasize_trained = 2, 0
+	datasize, datasize_trained = 1200, 1200
 
 	# need_acc_normal = True
 	need_acc_normal = False

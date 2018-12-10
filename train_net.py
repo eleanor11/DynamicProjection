@@ -129,8 +129,7 @@ def train():
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	data_size = 540
-	# data_size = 25
+	data_size = 500
 	batch_size = 5
 
 	# no supervision: 0, early supervision: 1, full supervision: 2
@@ -474,10 +473,10 @@ def train11():
 	# start_iter, datetime = 11000 + 1, '20180524_140932'
 
 
-	normal_ori_i = 1
+	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	data_size = 40
+	data_size = 600
 	batch_size = 5
 
 	indatapath = PATH + 'train_data_{}/'.format(data_size)
@@ -710,5 +709,5 @@ def train2():
 
 
 if __name__ == '__main__':
-	train()
-	# train11()
+	# train()
+	train11()
