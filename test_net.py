@@ -93,10 +93,10 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20181208_223855_0'
+	path = '20180627_092116_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
-	datasize, datasize_trained = 1200, 1200
+	datasize, datasize_trained = 1200, 500
 
 	# need_acc_normal = True
 	need_acc_normal = False

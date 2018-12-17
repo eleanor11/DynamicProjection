@@ -21,6 +21,7 @@ MODE = params.MODE
 
 SAVE = False
 SAVEALL = False
+SAVESIMPLE = SAVEALL and False
 
 SUBIN = params.SUBIN
 SUBALL = params.SUBALL
@@ -945,15 +946,15 @@ class DynamicProjection(object):
 		# self.colorCalibration()
 		# run = False
 
-		# capture train data
-		gid, gnum, gdelay = 0, 20, 0
-		cd_dirname = 'capture_data_origin_1127/'
+		# # capture train data
+		# gid, gnum, gdelay = 0, 20, 0
+		# cd_dirname = 'capture_data_origin_1127/'
 
 		# gid, gnum, gdelay = 0, 2, 0
 		# cd_dirname = 'capture_data_origin_pig/'
 
-		self.captureTrainData(gid, gnum, gdelay, cd_dirname)
-		run = False
+		# self.captureTrainData(gid, gnum, gdelay, cd_dirname)
+		# run = False
 		
 		print('start...')
 
@@ -995,6 +996,9 @@ class DynamicProjection(object):
 			else:
 				light_ratio = 10
 			self.render.lightRatio = light_ratio / 10.0
+
+			if REALTIME_MODE == 4:
+				g_num = 0
 
 		while run:
 
@@ -1204,10 +1208,12 @@ class DynamicProjection(object):
 							if self.index == 0:
 								np.save(path + '/depthback_origin.npy', self.depthback_origin)
 								np.save(path + '/colorback_origin.npy', self.colorback_origin)
-							np.save(path + '/rgbd.npy', rgbd)
-							np.save(path + '/rawdepth.npy', rawdepth)
-							np.save(path + '/rawcolor.npy', rawcolor)
-							np.save(path + '/rawinfrared.npy', rawinfrared)
+
+							if not SAVESIMPLE:
+								np.save(path + '/rgbd.npy', rgbd)
+								np.save(path + '/rawdepth.npy', rawdepth)
+								np.save(path + '/rawcolor.npy', rawcolor)
+								np.save(path + '/rawinfrared.npy', rawinfrared)
 
 
 					# change projection_mode
@@ -1289,10 +1295,9 @@ class DynamicProjection(object):
 								run = False
 					elif REALTIME_MODE == 4 and projection_mode == 1:
 						# 33 * 3 = 99
-						# r: 8, 16, ..., 248, 255
-						# g, b: 0, 8, 16, ..., 248, 255
-						value = self.index % 33
-						channel = int(self.index / 33) % 3
+						# r, g, b: 0, 8, 16, ..., 248, 255
+						value = (self.index - 1) % 33
+						channel = int((self.index - 1) / 33) % 3
 						color = np.array([0.0, 0.0, 0.0])
 						if value < 32:
 							color[channel] =value * 8
@@ -1300,11 +1305,13 @@ class DynamicProjection(object):
 							color[channel] = 255
 						self.render.lightColor = (color / 255.0).astype(np.float32)
 
-						if value == 0 and channel == 0:
+						if g_num == 99:
+							g_num = 0
 							light_ratio -= 1
 							self.render.lightRatio = light_ratio / 10.0
 							if light_ratio == 0:
 								run_next = False
+
 					elif REALTIME_MODE == 5 and projection_mode == 1:
 						self.render.lightPosition = LightPositions[light_position_idx]
 						self.render.lightColor = LightColors[light_color_idx]
@@ -1319,6 +1326,10 @@ class DynamicProjection(object):
 					elif REALTIME_MODE == 6 and projection_mode == 4:
 						self.render.lightPosition = LightPositions[light_position_idx]
 						light_position_idx = (light_position_idx + 1) % LightPositions.shape[0]
+
+						self.render.lightColor = LightColors[light_color_idx]
+						light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
+
 						if light_position_idx == 0:
 							run_next = False
 
@@ -1326,6 +1337,9 @@ class DynamicProjection(object):
 						if not joint_state == PyKinectV2.TrackingState_NotTracked:
 							[x, y] = joint_point
 							self.render.lightPosition = self.uv2project(joint_point, rawdepth[y * 512 + 511 - x])
+
+						self.render.lightColor = LightColors[light_color_idx]
+						light_color_idx = (light_color_idx + 1) % LightColors.shape[0]
 
 					elif REALTIME_MODE == 8 and projection_mode == 4:
 						if not joint_state == PyKinectV2.TrackingState_NotTracked:

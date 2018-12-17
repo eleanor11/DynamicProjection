@@ -129,11 +129,11 @@ def train():
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	data_size = 500
+	data_size = 600
 	batch_size = 5
 
 	# no supervision: 0, early supervision: 1, full supervision: 2
-	supervision = 0
+	supervision = 2
 	supervision_strategy = ['no', 'early', 'full']
 	if supervision == 0:
 		lp_iter = 0	
@@ -147,8 +147,8 @@ def train():
 
 	learning_rate = 1e-2
 
-	# indatapath = PATH + 'train_data_{}/'.format(data_size)
-	indatapath = PATH + 'train_data_{}_1/'.format(data_size)
+	indatapath = PATH + 'train_data_{}/'.format(data_size)
+	# indatapath = PATH + 'train_data_{}_1/'.format(data_size)
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
 	remove_back = False
@@ -709,5 +709,5 @@ def train2():
 
 
 if __name__ == '__main__':
-	# train()
-	train11()
+	train()
+	# train11()
