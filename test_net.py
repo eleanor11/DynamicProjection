@@ -101,8 +101,8 @@ def test():
 	# need_acc_normal = True
 	need_acc_normal = False
 
-	# remove_back = True
-	remove_back = False
+	remove_back = True
+	# remove_back = False
 
 	indatapath = PATH + 'train_data_{}/'.format(datasize)
 	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)

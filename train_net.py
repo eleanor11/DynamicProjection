@@ -123,13 +123,13 @@ def train():
 
 	start_iter, datetime = 0, ''
 	#start_iter, datetime = 2000 + 1, '20180611_181307_0'
-	end_iter = 20000
+	end_iter = 40000
 
 
 	normal_ori_i = 0
 	normal_ori = ['train', 'depth2normal']
 
-	data_size = 600
+	data_size = 1200
 	batch_size = 5
 
 	# no supervision: 0, early supervision: 1, full supervision: 2
@@ -142,14 +142,19 @@ def train():
 	else:
 		lp_iter = end_iter
 	
-	lamda_default = 1
-	# lamda_default = 10
+	# lamda_default = 1
+	lamda_default = 10
+
+	optimization = 0
+	optimization_method = ['adam', 'sgd', 'mix']
 
 	learning_rate = 1e-2
+	learning_rate_fixed = True
 
 	indatapath = PATH + 'train_data_{}/'.format(data_size)
 	# indatapath = PATH + 'train_data_{}_1/'.format(data_size)
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
+
 
 	remove_back = False
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
@@ -164,6 +169,7 @@ def train():
 	logging.info('normal: ' + normal_ori[normal_ori_i])
 	logging.info('supervision strategy: {} supervision, lp_iter: {}'.format(supervision_strategy[supervision], lp_iter))
 	logging.info('remove_back: {}'.format(remove_back))
+	logging.info('optimization: {}, learning_rate: {}, fixed: {}'.format(optimization_method[optimization], learning_rate, learning_rate_fixed))
 	logging.info('data_size: {}, train_size: {}, test_size: {}'.format(train_size + test_size, train_size, test_size))
 	logging.info('batch_size: {}, lamda: {}'.format(batch_size, lamda_default))
 	logging.info('lightdir: {}'.format(lightdir))
@@ -237,7 +243,7 @@ def train():
 
 					pre_normal = result[6]
 					test_ii = result[5]
-					if i % 2000 == 0 or i == end_iter - 1:
+					if i % (end_iter / 10) == 0 or i == end_iter - 1:
 						pre_normal = ((pre_normal + 1) / 2 * 255).astype(np.uint8)
 						pre_normal[pre_normal > 255] = 255
 						for j in range(batch_size):
@@ -276,48 +282,49 @@ def train():
 					np.array([[i, train_accuracy, train_accuracy_3, train_loss, test_accuracy, test_accuracy_3, test_loss]]), 
 					axis = 0)
 
-			# learning_rate = 1e-2
-			sess.run(train_step_adam, feed_dict = {
-				model.normal: train_normal[idx: idx + batch_size], 
-				model.color: train_color[idx: idx + batch_size], 
-				model.mask: train_mask[idx: idx + batch_size],
-				model.lamda: lamda, 
-				model.learning_rate: learning_rate})
-
-
-		# # adaptive adam
-		# 	if i < 100:
-		# 		learning_rate = 1e-2
-		# 	elif i < 500:
-		# 		learning_rate = 1e-3
-		# 	elif i < 2000:
-		# 		learning_rate = 1e-4	
-		# 	else:
-		# 		learning_rate = 3e-5
-		# 	sess.run(train_step_adam, feed_dict = {
-		# 		model.normal: train_normal[idx: idx + batch_size], 
-		# 		model.color: train_color[idx: idx + batch_size], 
-		# 		model.mask: train_mask[idx: idx + batch_size],
-		# 		model.lamda: lamda, 
-		# 		model.learning_rate: learning_rate})
-
-		# # # adaptive adam + gd
-		# 	if i < 500:
-		# 		learning_rate = 1e-2
-		# 		sess.run(train_step_adam, feed_dict = {
-		# 			model.normal: train_normal[idx: idx + batch_size], 
-		# 			model.color: train_color[idx: idx + batch_size], 
-		# 			model.mask: train_mask[idx: idx + batch_size],
-		# 			model.lamda: lamda, 
-		# 			model.learning_rate: learning_rate})
-		# 	else:
-		# 		learning_rate = 1e-2
-		# 		sess.run(train_step_gd, feed_dict = {
-		# 			model.normal: train_normal[idx: idx + batch_size], 
-		# 			model.color: train_color[idx: idx + batch_size], 
-		# 			model.mask: train_mask[idx: idx + batch_size],
-		# 			model.lamda: lamda, 
-		# 			model.learning_rate: learning_rate})
+			if optimization == 0:
+				sess.run(train_step_adam, feed_dict = {
+					model.normal: train_normal[idx: idx + batch_size], 
+					model.color: train_color[idx: idx + batch_size], 
+					model.mask: train_mask[idx: idx + batch_size],
+					model.lamda: lamda, 
+					model.learning_rate: learning_rate})
+			elif optimization == 1:
+				if not learning_rate_fixed:
+					if i < 100:
+						learning_rate = 1e-2
+					elif i < 500:
+						learning_rate = 1e-3
+					elif i < 2000:
+						learning_rate = 1e-4	
+					elif i < 20000:
+						learning_rate = 3e-5
+					else:
+						learning_rate = 1e-5
+				sess.run(train_step_gd, feed_dict = {
+					model.normal: train_normal[idx: idx + batch_size], 
+					model.color: train_color[idx: idx + batch_size], 
+					model.mask: train_mask[idx: idx + batch_size],
+					model.lamda: lamda, 
+					model.learning_rate: learning_rate})
+			elif optimization == 2:
+			# # adaptive adam + gd
+				if i < 500:
+					learning_rate = 1e-2
+					sess.run(train_step_adam, feed_dict = {
+						model.normal: train_normal[idx: idx + batch_size], 
+						model.color: train_color[idx: idx + batch_size], 
+						model.mask: train_mask[idx: idx + batch_size],
+						model.lamda: lamda, 
+						model.learning_rate: learning_rate})
+				else:
+					learning_rate = 1e-2
+					sess.run(train_step_gd, feed_dict = {
+						model.normal: train_normal[idx: idx + batch_size], 
+						model.color: train_color[idx: idx + batch_size], 
+						model.mask: train_mask[idx: idx + batch_size],
+						model.lamda: lamda, 
+						model.learning_rate: learning_rate})
 
 			if i % 1000 == 0 or i == end_iter - 1:
 				tf.train.Saver().save(sess, ckptpath + '/model_latest')
