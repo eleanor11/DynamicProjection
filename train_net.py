@@ -142,13 +142,14 @@ def train():
 	else:
 		lp_iter = end_iter
 	
-	# lamda_default = 1
-	lamda_default = 10
+	lamda_default = 1
+	# lamda_default = 10
 
 	optimization = 0
 	optimization_method = ['adam', 'sgd', 'mix']
 
 	learning_rate = 1e-2
+	# true：fixed， false: changed
 	learning_rate_fixed = True
 
 	indatapath = PATH + 'train_data_{}/'.format(data_size)
@@ -156,7 +157,8 @@ def train():
 	outdatapath, ckptpath = prepareLog(start_iter, normal_ori_i, datetime)
 
 
-	remove_back = False
+	# remove_back = False
+	remove_back = True
 	train_normal, test_normal, train_color, test_color, train_mask, test_mask, train_size, test_size = readData(
 		indatapath, outdatapath, data_size, batch_size, remove_back)
 	[size, height, width] = train_normal.shape[0: 3]
@@ -291,16 +293,14 @@ def train():
 					model.learning_rate: learning_rate})
 			elif optimization == 1:
 				if not learning_rate_fixed:
-					if i < 100:
+					if i < 10000:
 						learning_rate = 1e-2
-					elif i < 500:
+					elif i < 15000:
 						learning_rate = 1e-3
-					elif i < 2000:
-						learning_rate = 1e-4	
 					elif i < 20000:
-						learning_rate = 3e-5
+						learning_rate = 1e-4	
 					else:
-						learning_rate = 1e-5
+						learning_rate = 3e-5
 				sess.run(train_step_gd, feed_dict = {
 					model.normal: train_normal[idx: idx + batch_size], 
 					model.color: train_color[idx: idx + batch_size], 

@@ -9,7 +9,7 @@ import os
 from net import DPNet
 
 PATH = '../DynamicProjectionData/'
-SAVE_DIF = True
+SAVE_DIF = False
 SAVE_NPY = False
 SAVE_IMG = True
 
@@ -93,16 +93,16 @@ def test():
 
 	normal_ori = ['train', 'depth2normal']
 
-	path = '20180627_092116_0'
+	path = '20180701_001923_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
-	datasize, datasize_trained = 1200, 500
+	datasize, datasize_trained = 540, 540
 
 	# need_acc_normal = True
 	need_acc_normal = False
 
-	remove_back = True
-	# remove_back = False
+	# remove_back = True
+	remove_back = False
 
 	indatapath = PATH + 'train_data_{}/'.format(datasize)
 	# indatapath = PATH + 'train_data_{}_1/'.format(datasize)
@@ -116,7 +116,6 @@ def test():
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]
-	# lightdir = np.array([1, 2, 0]) / (5 ** 0.5)
 	model = DPNet(batch_size, height, width, normal_ori_i, lightdir)
 
 	logging.info('net: 0')
@@ -217,13 +216,13 @@ def test():
 					pre_normal[pre_normal > 255] = 255
 					cv.imwrite(outdatapath + '/prenormal{}.png'.format(i), pre_normal[0][..., ::-1])
 				
-				# # reflect
-				# min = np.min(reflect[0])
-				# d = np.max(reflect[0] - min)
-				# reflect = ((reflect + min) / d * 255).astype(np.uint8)
-				# cv.imwrite(outdatapath + '/prereflect{}.png'.format(i), reflect[0])
+				# reflect
+				min = np.min(reflect[0])
+				d = np.max(reflect[0] - min)
+				reflect = ((reflect + min) / d * 255).astype(np.uint8)
+				cv.imwrite(outdatapath + '/prereflect{}.png'.format(i), reflect[0])
+
 				# image
-				
 				if SAVE_DIF:
 					dif_img = np.abs(img[0] - color[i] * mask[i])
 					dif_img_avg = np.average(dif_img, axis = 2)
