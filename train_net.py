@@ -148,9 +148,9 @@ def train():
 	optimization = 0
 	optimization_method = ['adam', 'sgd', 'mix']
 
-	learning_rate = 1e-2
 	# true：fixed， false: changed
 	learning_rate_fixed = True
+	learning_rate = 1e-2
 
 	indatapath = PATH + 'train_data_{}/'.format(data_size)
 	# indatapath = PATH + 'train_data_{}_1/'.format(data_size)
@@ -273,11 +273,6 @@ def train():
 					i, train_accuracy, train_accuracy_3, train_loss, train_lr, train_lp))
 				print("step {}, testing accuracy {}, {}, loss {}, {}, {}".format(
 					i, test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp))
-				# if i == 19999:
-				# 	print("total: training accuracy {}, {}, loss {}, {}, {}".format(
-				# 		train_accuracy_total, train_accuracy_3_total, train_loss_total, train_lr_total, train_lp_total))
-				# 	print("total: testing accuracy {}, {}, loss {}, {}, {}".format(
-				# 		test_accuracy, test_accuracy_3, test_loss, test_lr, test_lp))
 
 				results = np.append(
 					results, 

@@ -1,6 +1,12 @@
 import numpy as np
 
 
+# when kinect and projector are connected
+# MODE = 0 or 1, PROJECTION_MODE = True
+# when kinect and projector are not connected
+# MODE = 2, PROJECTION_MODE = False
+
+
 # 0: record new background and capture new data by Kinect
 # 1: use background data, but capture new data by Kinect
 # 2: use off-line data for all
@@ -23,8 +29,11 @@ PROJECTION_MODE = False
 # SUBIN = 'data/data_body_empty_origin/'
 # SUBIN = 'data/data_pig_0630_origin/'
 
-SUBIN = 'data/data_body_origin/'
-
+# SUBIN = 'data/data_body_origin/'
+SUBIN = 'data/data_body_origin_1/'
+# SUBIN = 'data/data_bear_origin/'
+# SUBIN = 'data/data_bear_origin_3306/'
+# SUBIN = 'data/data_hand_origin/'
 
 # ------------------------------------------------
 
@@ -38,8 +47,11 @@ SUBIN = 'data/data_body_origin/'
 # SUBOUT = 'data/data_body_empty_origin/'
 # SUBOUT = 'data/data_pig_0630_origin/'
 
-SUBOUT = 'data/data_body_origin/'
-
+# SUBOUT = 'data/data_body_origin/'
+SUBOUT = 'data/data_body_origin_1/'
+# SUBOUT = 'data/data_bear_origin/'
+# SUBOUT = 'data/data_bear_origin_3306/'
+# SUBOUT = 'data/data_hand_origin/'
 
 # ------------------------------------------------
 
@@ -95,6 +107,10 @@ PROJECTION_TYPE = ['lighting', 'predicted', 'lambertian', 'colorlighting', 'pred
 
 # ------------------------------------------------
 
+# LightPositions = np.array([
+# 	[1.0, 0.0, 0.5], 
+# 	[0.0, 0.0, 1.0], 
+# ])
 
 # LightPositions = np.array([
 # 	[0.0, 0.0, 1.0], 
@@ -125,6 +141,30 @@ LightPositions = np.array([
 	[1.0, 0.5, 1.0], 
 	[1.0, 1.0, 1.0],
 ])
+# LightPositions = np.array([
+# 	[-1.0, 0.0, 1.0], 
+# 	[-0.5, 0.0, 1.0], 
+# 	[0.0, 0.0, 1.0], 
+# 	[0.5, 0.0, 1.0], 
+# 	[1.0, 0.0, 1.0], 
+# 	[1.0, 0.5, 1.0], 
+# 	[1.0, 1.0, 1.0],
+# 	[0.5, 0.75, 1.0],
+# 	[0.0, 0.5, 1.0],
+# 	[-0.5, 0.25, 1.0],
+# ])
+
+# LightPositions = np.array([
+# 	[-1.0, -0.5, 1.0], 
+# 	[-0.75, -0.5, 1.0], 
+# 	[-0.5, -0.25, 1.0], 
+# 	[-0.25, -0.25, 1.0], 
+# 	[0.0, 0.0, 1.0], 
+# 	[0.25, -0.25, 1.0], 
+# 	[0.5, -0.5, 1.0], 
+# 	[0.5, -1.0, 1.0], 
+# ])
+
 
 # LightColors = np.array([
 # 	[1.0, 1.0, 1.0], 
@@ -155,10 +195,34 @@ LightPositions = np.array([
 # 	[1.0, 1.0, 0.0], 
 # 	[0.0, 1.0, 0.0],
 # ])
+# LightColors = np.array([
+# 	[1.0, 1.0, 1.0], 
+# 	[0.5, 1.0, 1.5], 
+# 	[1.0, 0.5, 1.0], 
+# 	[1.0, 1.0, 0.5], 
+# 	[0.5, 1.0, 0.5],
+# ])
 LightColors = np.array([
 	[1.0, 1.0, 1.0], 
-	[0.5, 1.0, 1.5], 
+	[0.0, 1.0, 1.0], 
+	[1.0, 0.0, 1.0], 
+	[1.0, 1.0, 0.0],
+	[0.5, 1.0, 1.0], 
 	[1.0, 0.5, 1.0], 
-	[1.0, 1.0, 0.5], 
+	[1.0, 1.0, 0.5],  
+	[1.0, 0.5, 0.5],
 	[0.5, 1.0, 0.5],
+	[0.5, 0.5, 1.0],
 ])
+
+# LightColors = np.array([
+# 	[1.0, 1.0, 1.0], 
+# 	[0.5, 1.0, 1.5], 
+# 	[1.0, 0.5, 1.0], 
+# 	[1.0, 1.0, 0.5], 
+# 	[0.5, 1.0, 0.5],
+# 	[0.25, 1.0, 1.5], 
+# 	[1.0, 0.25, 1.0], 
+# 	[1.0, 1.0, 0.25], 
+# 	[0.5, 1.0, 0.25],
+# ])

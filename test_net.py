@@ -24,7 +24,7 @@ def prepareLog(normal_ori_i):
 
 	return outdatapath
 
-
+# read all data from a dataset
 def readData(indatapath, datasize, remove_back = False):
 
 	print('loading data...')
@@ -49,6 +49,7 @@ def readData(indatapath, datasize, remove_back = False):
 
 	return normal, color, mask
 
+# read several specific data from a dataset
 def readData1(indatapath, dataidx, remove_back = False):
 
 	print('load data')
@@ -71,6 +72,7 @@ def readData1(indatapath, dataidx, remove_back = False):
 
 	return normal, color, mask
 
+# to show difference between ground truth and predicted results
 def gray2rainbow(gray):
 	rainbow = np.zeros([gray.shape[0], gray.shape[1], 3])
 	mask = gray > 204
@@ -96,7 +98,12 @@ def test():
 	path = '20180701_001923_0'
 	normal_ori_i = int(path[len(path) - 1])
 	batch_size = 1
-	datasize, datasize_trained = 540, 540
+	datasize, datasize_trained = 500, 500
+	# datasize, datasize_trained = 540, 540
+	# datasize, datasize_trained = 600, 600
+	# datasize, datasize_trained = 660, 660
+	# datasize, datasize_trained = 40, 0
+	# datasize, datasize_trained = 2, 0
 
 	# need_acc_normal = True
 	need_acc_normal = False
@@ -109,7 +116,6 @@ def test():
 	# indatapath = PATH + 'train_data_pig/'
 	outdatapath = prepareLog(normal_ori_i)
 	ckptpath = PATH + 'train_log/' + path + '/ckpt'
-	# ckptpath = PATH + 'train_log/' + path + '/ckpt/10000'
 
 	normal, color, mask = readData(indatapath, datasize, remove_back)
 	# normal, color, mask = readData1(indatapath, [0, 1, 6, 7, 8, 9], remove_back)

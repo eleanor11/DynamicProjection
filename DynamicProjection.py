@@ -488,6 +488,7 @@ class DynamicProjection(object):
 
 		return rgb, z
 
+	# for the experiments of triangular refining
 	def project_shader0(self, rawdepth, corres, mask, mask_edge = np.zeros([424, 512], np.bool)):
 		proj = np.zeros([424, 512, 3], np.float32)
 
@@ -509,6 +510,7 @@ class DynamicProjection(object):
 		proj[mask, 0], proj[mask, 1], proj[mask, 2] = x, y, denom
 
 	
+		# cul, cdr
 		kernel_cul = np.array([[0, 1, 0], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
 		cul = cv.erode(mask.astype(np.uint8), kernel_cul, iterations = 1, borderValue = 0)
 		cul_cmask = cul.astype(np.bool)
@@ -521,9 +523,28 @@ class DynamicProjection(object):
 		cdr_dmask = cv.filter2D(cdr, -1, np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
 		cdr_rmask = cv.filter2D(cdr, -1, np.array([[0, 0, 0], [1, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
 
-		# cru, cld
+
+		# # cru, cld
+		# kernel_cru = np.array([[0, 1, 0], [0, 1, 1], [0, 0, 0]], dtype = np.uint8)
+		# cru = cv.erode(mask.astype(np.uint8), kernel_cru, iterations = 1, borderValue = 0)
+		# # cru[x, y] -> cdr[x - 1, y] & cul[x, y + 1], cdr move down, cul move left
+		# cru = (~ (np.concatenate((np.zeros([1, 512], dtype = np.bool), cdr[0: 423, :]), 0) & (np.concatenate((cul[:, 1: 512], np.zeros([424, 1], dtype = np.bool)), 1)))) & cru
+		# cru_cmask = cru.astype(np.bool)
+		# cru_rmask = cv.filter2D(cru, -1, np.array([[0, 0, 0], [1, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		# cru_umask = cv.filter2D(cru, -1, np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+		# kernel_cld = np.array([[0, 0, 0], [1, 1, 0], [0, 1, 0]], dtype = np.uint8)
+		# cld = cv.erode(mask.astype(np.uint8), kernel_cld, iterations = 1, borderValue = 0)
+		# # cld[x, y] -> cdr[x, y - 1] & cul[x + 1, y], cdr move right, cul move up
+		# cld = (~ (np.concatenate((np.zeros([424, 1], dtype = np.bool), cdr[:, 0: 511]), 1) & (np.concatenate((cul[1: 424, :], np.zeros([1, 512], dtype = np.bool)), 0)))) & cld
+		# cld_cmask = cld.astype(np.bool)
+		# cld_lmask = cv.filter2D(cld, -1, np.array([[0, 0, 0], [0, 0, 1], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+		# cld_dmask = cv.filter2D(cld, -1, np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
+
+
+		# cru, cld edge
 		kernel_cru = np.array([[0, 1, 0], [0, 1, 1], [0, 0, 0]], dtype = np.uint8)
-		cru = cv.erode(mask.astype(np.uint8), kernel_cru, iterations = 1, borderValue = 0)
+		cru = cv.erode(mask_edge.astype(np.uint8), kernel_cru, iterations = 1, borderValue = 0)
 		# cru[x, y] -> cdr[x - 1, y] & cul[x, y + 1], cdr move down, cul move left
 		cru = (~ (np.concatenate((np.zeros([1, 512], dtype = np.bool), cdr[0: 423, :]), 0) & (np.concatenate((cul[:, 1: 512], np.zeros([424, 1], dtype = np.bool)), 1)))) & cru
 		cru_cmask = cru.astype(np.bool)
@@ -531,7 +552,7 @@ class DynamicProjection(object):
 		cru_umask = cv.filter2D(cru, -1, np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
 
 		kernel_cld = np.array([[0, 0, 0], [1, 1, 0], [0, 1, 0]], dtype = np.uint8)
-		cld = cv.erode(mask.astype(np.uint8), kernel_cld, iterations = 1, borderValue = 0)
+		cld = cv.erode(mask_edge.astype(np.uint8), kernel_cld, iterations = 1, borderValue = 0)
 		# cld[x, y] -> cdr[x, y - 1] & cul[x + 1, y], cdr move right, cul move up
 		cld = (~ (np.concatenate((np.zeros([424, 1], dtype = np.bool), cdr[:, 0: 511]), 1) & (np.concatenate((cul[1: 424, :], np.zeros([1, 512], dtype = np.bool)), 0)))) & cld
 		cld_cmask = cld.astype(np.bool)
@@ -539,6 +560,7 @@ class DynamicProjection(object):
 		cld_dmask = cv.filter2D(cld, -1, np.array([[0, 1, 0], [0, 0, 0], [0, 0, 0]]), borderType = cv.BORDER_CONSTANT).astype(np.bool)
 
 
+		# curl, cdlr, crdu, clud edge
 		kernel_curl = np.array([[0, 0, 1], [1, 1, 0], [0, 0, 0]], dtype = np.uint8)
 		curl = cv.erode(mask_edge.astype(np.uint8), kernel_curl, iterations = 1, borderValue = 0)
 		curl_cmask = curl.astype(np.bool)
@@ -577,19 +599,19 @@ class DynamicProjection(object):
 		c1 = np.concatenate([corres[cul_lmask], corres[cdr_rmask]], 0)
 
 
-		# cul & cdr & cru & cld
-		num = num + np.sum(cru) + np.sum(cld)
+		# # cru & cld
+		# num = num + np.sum(cru) + np.sum(cld)
 			
-		p0 = np.concatenate([p0, proj[cru_cmask], proj[cld_cmask]], 0)
-		p2 = np.concatenate([p2, proj[cru_rmask], proj[cld_lmask]], 0)
-		p1 = np.concatenate([p1, proj[cru_umask], proj[cld_dmask]], 0)
+		# p0 = np.concatenate([p0, proj[cru_cmask], proj[cld_cmask]], 0)
+		# p2 = np.concatenate([p2, proj[cru_rmask], proj[cld_lmask]], 0)
+		# p1 = np.concatenate([p1, proj[cru_umask], proj[cld_dmask]], 0)
 
-		c0 = np.concatenate([c0, corres[cru_cmask], corres[cld_cmask]], 0)
-		c2 = np.concatenate([c2, corres[cru_rmask], corres[cld_lmask]], 0)
-		c1 = np.concatenate([c1, corres[cru_umask], corres[cld_dmask]], 0)
+		# c0 = np.concatenate([c0, corres[cru_cmask], corres[cld_cmask]], 0)
+		# c2 = np.concatenate([c2, corres[cru_rmask], corres[cld_lmask]], 0)
+		# c1 = np.concatenate([c1, corres[cru_umask], corres[cld_dmask]], 0)
 
 
-		# curl & cdlr 
+		# # curl & cdlr 
 		# num = num + np.sum(curl) + np.sum(cdlr)
 
 		# p0 = np.concatenate([p0, proj[curl_cmask], proj[cdlr_cmask]], 0)
@@ -600,16 +622,17 @@ class DynamicProjection(object):
 		# c2 = np.concatenate([c2, corres[curl_urmask], corres[cdlr_dlmask]], 0) 
 		# c1 = np.concatenate([c1, corres[curl_lmask], corres[cdlr_rmask]], 0) 
 
-		# crdu & clud
-		num = num + np.sum(crdu) + np.sum(clud)
 
-		p0 = np.concatenate([p0, proj[crdu_cmask], proj[clud_cmask]], 0)
-		p2 = np.concatenate([p2, proj[crdu_rdmask], proj[clud_lumask]], 0)
-		p1 = np.concatenate([p1, proj[crdu_umask], proj[clud_dmask]], 0)
+		# # crdu & clud
+		# num = num + np.sum(crdu) + np.sum(clud)
 
-		c0 = np.concatenate([c0, corres[crdu_cmask], corres[clud_cmask]], 0)
-		c2 = np.concatenate([c2, corres[crdu_rdmask], corres[clud_lumask]], 0) 
-		c1 = np.concatenate([c1, corres[crdu_umask], corres[clud_dmask]], 0) 
+		# p0 = np.concatenate([p0, proj[crdu_cmask], proj[clud_cmask]], 0)
+		# p2 = np.concatenate([p2, proj[crdu_rdmask], proj[clud_lumask]], 0)
+		# p1 = np.concatenate([p1, proj[crdu_umask], proj[clud_dmask]], 0)
+
+		# c0 = np.concatenate([c0, corres[crdu_cmask], corres[clud_cmask]], 0)
+		# c2 = np.concatenate([c2, corres[crdu_rdmask], corres[clud_lumask]], 0) 
+		# c1 = np.concatenate([c1, corres[crdu_umask], corres[clud_dmask]], 0) 
 
 
 
@@ -923,7 +946,6 @@ class DynamicProjection(object):
 
 		return rawdepth_filter
 
-
 	def initNet(self, path, sess):
 		normal_ori_i = int(path[len(path) - 1])
 		lightdir = [0.0, 0.0, 1.0]
@@ -937,6 +959,86 @@ class DynamicProjection(object):
 		else:
 			return model, normal_ori_i, [reflect_, I_]
 
+
+# Experiments
+	def compareFilters(self):
+		idx = 135
+		depth_part = cv.imread('depth_part{}.png'.format(idx))[..., 0]
+		rawdepth = np.load('depth{}.npy'.format(idx))
+		mask = depth_part >  0
+		not_mask = depth_part <= 0
+		rawdepth_filter = copy.copy(rawdepth.reshape([424, 512]))
+		rawdepth_smooth = self.smooth(mask, not_mask, rawdepth, depth_part)		
+		normal = ((self.depth2normal(rawdepth_filter, mask) + 1) / 2 * 255).astype(np.uint8)
+		depth_avg = self.filter(rawdepth_filter, 1)
+		depth_med = self.filter(rawdepth_filter, 2)
+		depth_gau = self.filter(rawdepth_filter, 3)
+		normal_avg = ((self.depth2normal(depth_avg, mask) + 1) / 2 * 255).astype(np.uint8)
+		normal_med = ((self.depth2normal(depth_med, mask) + 1) / 2 * 255).astype(np.uint8)
+		normal_gau = ((self.depth2normal(depth_gau, mask) + 1) / 2 * 255).astype(np.uint8)
+		cv.imwrite('filter_avg{}.png'.format(idx), self.depth2gray(depth_avg))
+		cv.imwrite('filter_med{}.png'.format(idx), self.depth2gray(depth_med))
+		cv.imwrite('filter_gau{}.png'.format(idx), self.depth2gray(depth_gau))
+		cv.imwrite('filter_avg_part{}.png'.format(idx), self.depth2gray(depth_avg) * mask)
+		cv.imwrite('filter_med_part{}.png'.format(idx), self.depth2gray(depth_med) * mask)
+		cv.imwrite('filter_gau_part{}.png'.format(idx), self.depth2gray(depth_gau) * mask)
+		cv.imwrite('filter_avg_normal{}.png'.format(idx), normal_avg)
+		cv.imwrite('filter_med_normal{}.png'.format(idx), normal_med)
+		cv.imwrite('filter_gau_normal{}.png'.format(idx), normal_gau)
+		# rawdepth_filter = self.smooth(mask, not_mask, rawdepth, depth_part)
+		# cv.imwrite('filter{}.png'.format(idx), rawdepth_filter)
+		reflect = np.ones([424, 512, 3], np.float32)
+		corres = np.zeros([424, 512, 3], np.uint8)
+		corres[mask] = np.array([255, 255, 255])
+		normal_ori_i = 1
+
+		depth_edge = cv.Canny(corres, 50, 100)
+		kernel = cv.getStructuringElement(cv.MORPH_RECT, (10, 10))
+		depth_edge_dilate = cv.dilate(depth_edge, kernel, iterations = 1)
+		mask_depth_edge = (depth_edge_dilate.reshape([424, 512]) > 0)
+		mask_edge = mask_depth_edge & mask
+
+		while True:
+			# rgb, z = self.project(depth_avg, corres, mask, normal_ori_i, normal_avg, reflect, 1)
+			# rgb, z = self.project(depth_med, corres, mask, normal_ori_i, normal_med, reflect, 1)
+			# rgb, z = self.project(depth_gau, corres, mask, normal_ori_i, normal_gau, reflect, 1)
+			# rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, normal, reflect, 1)
+			# rgb, z = self.project(depth_avg, corres, mask, normal_ori_i, normal_avg, reflect, 0)
+			# rgb, z = self.project(depth_med, corres, mask, normal_ori_i, normal_med, reflect, 0)
+			# rgb, z = self.project(depth_gau, corres, mask, normal_ori_i, normal_gau, reflect, 0)
+			# rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, normal, reflect, 0)
+
+			self.project_shader0(rawdepth_smooth, corres, mask, mask_edge)
+
+	def compareEdges(self):
+		flag, rawdepth, rawcolor, rawinfrared, cameraColor, joint_states, joint_points = self.getRawData()
+		rgbd, depth_part = self.preprocess(rawdepth, rawcolor)
+
+		mask = depth_part >  0
+		not_mask = depth_part <= 0
+		# rawdepth_filter = copy.copy(rawdepth.reshape([424, 512]))
+		# rawdepth_filter = self.filter(rawdepth_filter, 2)
+		rawdepth_filter = self.smooth(mask, not_mask, rawdepth, depth_part)
+
+		reflect = np.ones([424, 512, 3], np.float32)
+		normal = None
+		corres = np.zeros([424, 512, 3], np.uint8)
+		corres[mask] = np.array([255, 255, 255])
+		normal_ori_i = 1
+
+		depth_edge = cv.Canny(corres, 50, 100)
+		kernel = cv.getStructuringElement(cv.MORPH_RECT, (10, 10))
+		depth_edge_dilate = cv.dilate(depth_edge, kernel, iterations = 1)
+		mask_depth_edge = (depth_edge_dilate.reshape([424, 512]) > 0)
+		mask_edge = mask_depth_edge & mask
+
+
+		while True:
+			# rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, normal, reflect, 0)
+			self.project_shader0(rawdepth_filter, corres, mask, mask_edge)
+
+
+# run
 	def run(self):
 
 		run = True
@@ -955,6 +1057,14 @@ class DynamicProjection(object):
 
 		# self.captureTrainData(gid, gnum, gdelay, cd_dirname)
 		# run = False
+
+
+		# # perform experiments
+		# run = False
+
+		# self.compareFilters()
+		# self.compareEdges()
+
 		
 		print('start...')
 
@@ -965,6 +1075,7 @@ class DynamicProjection(object):
 
 			# init net
 			sess = tf.Session()
+			# model, normal_ori_i, content = self.initNet('20181214_145728_0', sess)
 			model, normal_ori_i, content = self.initNet('20180624_210335_0', sess)
 			
 			self.time = time.time()
@@ -991,14 +1102,20 @@ class DynamicProjection(object):
 			self.render.lightPosition = LightPositions[light_position_idx]
 			self.render.lightColor = LightColors[light_color_idx]
 
-			if REALTIME_MODE == 5:
+			if REALTIME_MODE == 4:
+				color_itv = 1
+				color_value = -color_itv
+				color_channel = 0
+				g_num = 256 / color_itv
+				if color_itv > 1:
+					g_num += 1
+				light_ratio_min = 8
+				light_ratio_max = 8
+			elif REALTIME_MODE == 5:
 				light_ratio = 8
 			else:
 				light_ratio = 10
 			self.render.lightRatio = light_ratio / 10.0
-
-			if REALTIME_MODE == 4:
-				g_num = 0
 
 		while run:
 
@@ -1022,7 +1139,7 @@ class DynamicProjection(object):
 				if SAVE:
 					cv.imwrite(DATAPATH + SUBOUT + 'depth.png', depth)
 					cv.imwrite(DATAPATH + SUBOUT + 'color.png', color)
-					cv.imwrite(DATAPATH + SUBOUT + 'cameraColor.png', cameraColor)
+					# cv.imwrite(DATAPATH + SUBOUT + 'cameraColor.png', cameraColor)
 					np.save(DATAPATH + SUBOUT + 'depth_part.npy', depth_part)
 
 				# cv.imshow('depth', depth)
@@ -1063,16 +1180,20 @@ class DynamicProjection(object):
 									model.mask: [np.expand_dims(mask, 2)], 
 									model.lamda: 1.0
 								})
-							pre_normal_o = copy.copy(pre_normal)
+							# pre_normal_o = copy.copy(pre_normal)
 							pre_normal[..., 0] = 0 - pre_normal[..., 0]
-							pre_img[pre_img > 1] = 1
-							pre_img[pre_img < 0] = 0
+							# pre_img[pre_img > 1] = 1
+							# pre_img[pre_img < 0] = 0
+
+							# print(np.max(pre_reflect[0]), np.min(pre_reflect[0]))
+							# print(np.max(pre_normal[0]), np.min(pre_normal[0]))
+							# print(np.max(pre_img[0]), np.min(pre_img[0]))
 
 							# cv.imshow('pre_img', (pre_img[0] * 255).astype(np.uint8))
+							# cv.imshow('pre_reflect', (pre_reflect[0] * 255).astype(np.uint8))
 							# cv.imshow('pre_normal', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
 						else:
-							pre_normal == None
-							pre_reflect, pre_img = sess.run(
+							pre_normal, pre_reflect, pre_img = sess.run(
 								content, 
 								feed_dict = {
 									model.normal: [normal], 
@@ -1080,6 +1201,7 @@ class DynamicProjection(object):
 									model.mask: [np.expand_dims(mask, 2)], 
 									model.lamda: 1.0
 								})
+							pre_normal = [normal]
 					elif RECONSTRUCTION_MODE == 2:
 						normal_ori_i = 0
 						path = DATAPATH + SUB_BRDF + 'lighting'
@@ -1107,7 +1229,8 @@ class DynamicProjection(object):
 				# render content
 				corres = np.zeros([424, 512, 3], np.uint8)
 				corres[mask] = np.array([255, 255, 255])
-				cc = cv.imread('color_mb1.png')
+				# cc = cv.imread('data_bear_1216.png')
+				cc = cv.imread('data_pig_1228.png')
 				if projection_mode == 2 or projection_mode == 6:
 				 	corres[mask] = cc[mask]
 				# corres[mask] = texture[mask]
@@ -1141,17 +1264,20 @@ class DynamicProjection(object):
 						if makedir:
 							path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 							if REALTIME_MODE == 4:
-								path += '_{}'.format(light_ratio / 10.0)
+								# path += '_{}'.format(light_ratio / 10.0)
+								path += '_{}'.format(255 - (self.index - 1) % 256)
 							while os.path.isdir(path):
 								self.index += 1
 								path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 								if REALTIME_MODE == 4:
-									path += '_{}'.format(light_ratio / 10.0)
+									# path += '_{}'.format(light_ratio / 10.0)
+									path += '_{}'.format(255 - (self.index - 1) % 256)
 							os.mkdir(path)
 
 						path = '{}{}'.format(DATAPATH + SUBALL, self.index)
 						if REALTIME_MODE == 4:
-							path += '_{}'.format(light_ratio / 10.0)
+							# path += '_{}'.format(light_ratio / 10.0)
+							path += '_{}'.format(255 - (self.index - 1) % 256)
 						if projection_mode == 0:
 							print('record lighting...')
 							path += '/lighting'
@@ -1163,7 +1289,8 @@ class DynamicProjection(object):
 							path += '/lambertian'
 						elif projection_mode == 3:
 							print('record color lighting...')
-							path += '/colorlighting'
+							# path += '/colorlighting'
+							path += '/colorlighting_{}'.format(self.render.lightRatio) 
 						elif projection_mode == 4:
 							print('record pointlight with predicted...')
 							path += '/predicted_point'
@@ -1189,17 +1316,23 @@ class DynamicProjection(object):
 
 								# cv.imwrite(path + '/normal.png', ((normal[..., ::-1] + 1) / 2 * 255).astype(np.uint8))
 								cv.imwrite(path + '/prenormal.png', ((pre_normal[0][..., ::-1] + 1) / 2 * 255).astype(np.uint8))
+								cv.imwrite(path + '/prereflect.png', (pre_reflect[0] * 255).astype(np.uint8))
 								cv.imwrite(path + '/preimg.png', (pre_img[0] * 255).astype(np.uint8))
 
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
-							cv.imwrite(path + '/cameraColor.png', cameraColor)
+							# cv.imwrite(path + '/cameraColor.png', cameraColor)
+							cv.imwrite(path + '/mask.png', (mask * 255).astype(np.uint8))
 							cv.imwrite(DATAPATH + SUBALL + 'color{}_0lighting.png'.format(self.index), color * np.expand_dims(mask, axis = 3))
 						else:
 							cv.imwrite(path + '/depth.png', depth)
 							cv.imwrite(path + '/color.png', color)
-							cv.imwrite(path + '/cameraColor.png', cameraColor)
-							cv.imwrite(DATAPATH + SUBALL + 'color{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode]), color * np.expand_dims(mask, axis = 3))
+							# cv.imwrite(path + '/cameraColor.png', cameraColor)
+							# cv.imwrite(DATAPATH + SUBALL + 'color{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode]), color * np.expand_dims(mask, axis = 3))
+							if REALTIME_MODE == 4 and projection_mode == 3:
+								cv.imwrite(DATAPATH + SUBALL + 'color{}_{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode], self.render.lightRatio), color * np.expand_dims(mask, axis = 3))
+							else:
+								cv.imwrite(DATAPATH + SUBALL + 'color{}_{}.png'.format(self.index, PROJECTION_TYPE[projection_mode]), color * np.expand_dims(mask, axis = 3))
 							rrgb = (rgb / (light_ratio / 10.0))
 							rrgb[rrgb > 255] = 255
 							cv.imwrite(path + '/render.png', rrgb.astype(np.uint8))
@@ -1224,11 +1357,23 @@ class DynamicProjection(object):
 							print(self.index)
 						print('project ' + PROJECTION_TYPE[projection_mode])
 					elif REALTIME_MODE == 4:
-						projection_mode = projection_mode % 3 + 1
+						if projection_mode == 3:
+							light_ratio -= 1
+							if light_ratio < light_ratio_min:
+								projection_mode = 1
+						else:
+							projection_mode = projection_mode % 3 + 1
 						if projection_mode == 1:
 							self.index += 1
 							print(self.index)
+							light_ratio = light_ratio_max
 						print('project ' + PROJECTION_TYPE[projection_mode])
+
+						# projection_mode = projection_mode % 3 + 1
+						# if projection_mode == 1:
+						# 	self.index += 1
+						# 	print(self.index)
+						# print('project ' + PROJECTION_TYPE[projection_mode])
 					elif REALTIME_MODE == 5:
 						projection_mode = projection_mode % 3 + 1
 						if projection_mode == 3 and light_position_idx != 1:
@@ -1294,23 +1439,45 @@ class DynamicProjection(object):
 							if light_color_idx == 0:
 								run = False
 					elif REALTIME_MODE == 4 and projection_mode == 1:
-						# 33 * 3 = 99
-						# r, g, b: 0, 8, 16, ..., 248, 255
-						value = (self.index - 1) % 33
-						channel = int((self.index - 1) / 33) % 3
-						color = np.array([0.0, 0.0, 0.0])
-						if value < 32:
-							color[channel] =value * 8
-						else: 
-							color[channel] = 255
-						self.render.lightColor = (color / 255.0).astype(np.float32)
+						# # 33 * 3 = 99
+						# # r, g, b: 0, 8, 16, ..., 248, 255
+						# value = (self.index - 1) % 33
+						# channel = int((self.index - 1) / 33) % 3
+						# color = np.array([0.0, 0.0, 0.0])
+						# if value < 32:
+						# 	color[channel] =value * 8
+						# else: 
+						# 	color[channel] = 255
+						# self.render.lightColor = (color / 255.0).astype(np.float32)
 
-						if g_num == 99:
-							g_num = 0
-							light_ratio -= 1
-							self.render.lightRatio = light_ratio / 10.0
-							if light_ratio == 0:
-								run_next = False
+						# if g_num == 99:
+						# 	g_num = 0
+						# 	light_ratio -= 1
+						# 	self.render.lightRatio = light_ratio / 10.0
+						# 	if light_ratio == 0:
+						# 		run_next = False
+
+						# 256 * 3
+						value = (self.index - 1) % 256
+						channel = int((self.index - 1) / 256) % 3
+						color = np.array([0.0, 0.0, 0.0])
+						color[channel] = 255 - value
+						self.render.lightColor = (color / 255.0).astype(np.float32)
+						self.render.lightRatio = light_ratio / 10
+						
+						color_value = color_value + color_itv
+						if color_value == 256 and color_itv > 1:
+							color_value = 255
+						elif color_value >= 256:
+							color_value = 0
+							color_channel += 1
+						
+						color = np.array([0.0, 0.0, 0.0])
+						color[channel] = color_value
+
+						if self.index > g_num * 3:
+							run_next = False
+
 
 					elif REALTIME_MODE == 5 and projection_mode == 1:
 						self.render.lightPosition = LightPositions[light_position_idx]
@@ -1361,13 +1528,25 @@ class DynamicProjection(object):
 					if projection_mode == -1:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0])
 					elif projection_mode == 0:
+						# all light
 						self.projectLight()
+
+						# # part light
+						# corres[mask] = self.render.lightColor * 255 * 0.3
+						# rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 0)
+				
 					elif projection_mode == 1:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 2)
 					elif projection_mode == 2:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 1)
 					elif projection_mode == 3:
+						# all light
 						rgb, z = self.projectLight(self.render.lightColor, self.render.lightRatio)
+
+						# # part light
+						# corres[mask] = self.render.lightColor[::-1] * 255 * self.render.lightRatio
+						# rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 0)
+					
 					elif projection_mode == 4:
 						rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, pre_normal[0], pre_reflect[0], 3)
 					elif projection_mode == 5:

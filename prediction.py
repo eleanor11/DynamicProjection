@@ -22,6 +22,7 @@ def prepareLog(normal_ori_i):
 	return outdatapath
 
 
+# read all data from a dataset
 def readData(indatapath, datasize, remove_back = False):
 
 	print('load data')
@@ -46,6 +47,7 @@ def readData(indatapath, datasize, remove_back = False):
 
 	return normal, color, mask
 
+# read several several data from a dataset
 def readData1(indatapath, dataidx, remove_back = False):
 
 	print('load data')
@@ -68,6 +70,7 @@ def readData1(indatapath, dataidx, remove_back = False):
 
 	return normal, color, mask
 
+# read a specific datum
 def readData2():
 	normal = np.load('../DynamicProjectionData/data/data_body_0630_2/0/lighting/normal.npy')
 	mask = np.load('../DynamicProjectionData/data/data_body_0630_2/0/lighting/mask.npy')
@@ -95,7 +98,7 @@ def predict():
 	# datasize, datasize_trained = 540, 540
 	# datasize, datasize_trained = 40, 0
 	remove_back = False
-	# npy_list = []
+	npy_list = []
 
 	# datasize, datasize_trained, npy_list = 500, 500, [367]
 	datasize, datasize_trained, npy_list = 500, 500, [316]
@@ -109,9 +112,9 @@ def predict():
 	# indatapath = PATH + 'train_data_pig/'
 	outdatapath = prepareLog(normal_ori_i)
 
-	# normal, color, mask = readData(indatapath, datasize, remove_back)
+	normal, color, mask = readData(indatapath, datasize, remove_back)
 	# normal, color, mask = readData1(indatapath, npy_list, remove_back)
-	normal, color, mask = readData2()
+	# normal, color, mask = readData2()
 	[size, height, width] = normal.shape[0: 3]
 
 	lightdir = [0.0, 0.0, 1.0]
@@ -152,8 +155,7 @@ def predict():
 						model.lamda: 1.0}) 
 
 			# npy
-			# if len(npy_list) == 0 or i in npy_list:
-			if True:
+			if len(npy_list) == 0 or i in npy_list:
 				if normal_ori_i == 0:
 					np.save(outdatapath + '/prenormal{}.npy'.format(i), pre_normal[0])
 				np.save(outdatapath + '/prereflect{}.npy'.format(i), reflect[0])
