@@ -1037,6 +1037,35 @@ class DynamicProjection(object):
 			# rgb, z = self.project(rawdepth_filter, corres, mask, normal_ori_i, normal, reflect, 0)
 			self.project_shader0(rawdepth_filter, corres, mask, mask_edge)
 
+# data
+	def preparedata(self)
+		# prepare data for paper
+		run = False
+		# datalist = [135, 263, 505, 521]
+		datalist = [135, 136]
+		for idx in datalist:
+			path = '../DynamicProjectionData/capture_data_origin_0616_merge/'
+			color = np.load('{}color{}.npy'.format(path, idx))
+			depth = np.load('{}depth{}.npy'.format(path, idx))
+			depthback = np.load('{}rawdepth_b_{}.npy'.format(path, int(idx / 20)))
+			self.depthback_origin = depthback
+
+			color = color.reshape([1080, 1920, 4])
+			depth = depth.reshape([424, 512])
+
+			depth_part = self.depth2gray(depth, True) > 0
+			mask = depth_part > 0
+
+			cv.imwrite('color{}.png'.format(idx), color[..., 0:3])
+			cv.imwrite('depth{}.png'.format(idx), self.depth2gray(depth, False))
+			cv.imwrite('depth_part{}.png'.format(idx), self.depth2gray(depth, True))
+			cv.imwrite('mask{}.png'.format(idx), mask.reshape((424, 512)).astype(np.uint8) * 255)
+			cv.imwrite('normal{}.png'.format(idx), ((self.depth2normal(depth, mask) + 1) / 2 * 255).astype(np.uint8))
+			cv.imwrite('depth_back{}.png'.format(idx), self.depth2gray(depthback))
+			cv.imwrite('d2c{}.png'.format(idx), self.d2c(depth, color).reshape([424, 512, 4])[..., 0:3])
+			cv.imwrite('c2d{}.png'.format(idx), self.c2d(depth, color).reshape([424, 512, 4])[..., 0:3])
+			cv.imwrite('d2c{}_part.png'.format(idx), self.d2c(depth, color).reshape([424, 512, 4])[..., 0:3] * np.expand_dims(mask, axis = 3))
+
 
 # run
 	def run(self):
@@ -1064,6 +1093,11 @@ class DynamicProjection(object):
 
 		# self.compareFilters()
 		# self.compareEdges()
+
+
+		# # prepare data
+		# run = False
+		# self.preparedata()
 
 		
 		print('start...')
